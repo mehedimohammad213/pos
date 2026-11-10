@@ -1,0 +1,60 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f1f5f9;
+  --foreground: #0f172a;
+  --accent: #0d9488;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-source-sans);
+  --font-mono: var(--font-ibm-plex-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-source-sans), system-ui, sans-serif;
+}
+
+.font-mono,
+.tabular-nums {
+  font-family: var(--font-ibm-plex-mono), ui-monospace, monospace;
+}
+
+@media print {
+  .no-print,
+  aside,
+  header {
+    display: none !important;
+  }
+  .print-only {
+    display: block !important;
+  }
+  body {
+    background: white;
+  }
+  main {
+    padding: 0 !important;
+  }
+  .invoice-a4 {
+    width: 210mm;
+    margin: 0 auto;
+    padding: 12mm;
+    font-size: 12pt;
+    border: none !important;
+    box-shadow: none !important;
+  }
+}
+
+.print-only {
+  display: none;
+}
+
+.label-sheet {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
