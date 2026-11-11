@@ -78,7 +78,8 @@ export async function api<T>(
       if (typeof window !== "undefined" && !window.location.pathname.startsWith("/login")) {
         window.location.href = "/login";
       }
-      throw new ApiError("Session expired", 401);
+      // Stop callers without an unhandled rejection (Next.js error overlay).
+      return new Promise<T>(() => {});
     }
   }
 

@@ -13,6 +13,8 @@ export function AuthGuard({ children }: { children: ReactNode }) {
     if (loading) return;
     const token = getAccessToken();
     if (!token || !user) {
+      // Avoid bounce loops when already heading to login (e.g. after Sign out).
+      if (typeof window !== "undefined" && window.location.pathname.startsWith("/login")) return;
       const next =
         typeof window !== "undefined" ? window.location.pathname + window.location.search : "/";
       router.replace(`/login?next=${encodeURIComponent(next)}`);

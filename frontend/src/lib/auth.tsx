@@ -66,10 +66,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await api("/auth/logout", { method: "POST" });
     } catch {
-      /* ignore */
+      /* ignore — local sign-out still proceeds */
     }
     clearTokens();
     setUser(null);
+    if (typeof window !== "undefined") {
+      window.location.href = "/login";
+    }
   }, []);
 
   const hasPermission = useCallback(

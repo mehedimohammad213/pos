@@ -75,7 +75,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="border-t border-slate-700 p-3">
           <button
             type="button"
-            onClick={() => void logout().then(() => (window.location.href = "/login"))}
+            onClick={() => void logout()}
             className="w-full rounded-lg bg-slate-800 px-3 py-2 text-sm text-slate-200 hover:bg-slate-700"
           >
             Sign out
