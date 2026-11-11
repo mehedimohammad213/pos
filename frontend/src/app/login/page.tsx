@@ -2,6 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useEffect, useState, Suspense } from "react";
+import Image from "next/image";
 import { useAuth } from "@/lib/auth";
 import { Alert, Btn, Field, Input } from "@/components/ui";
 
@@ -36,8 +37,36 @@ function LoginForm() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-900 px-4">
-      <LoginPanel onSubmit={onSubmit} email={email} password={password} error={error} busy={busy} setEmail={setEmail} setPassword={setPassword} />
+    <div className="grid min-h-screen bg-slate-900 lg:grid-cols-2">
+      <div className="flex flex-col justify-center px-6 py-12 sm:px-10 lg:px-16 xl:px-24">
+        <LoginPanel
+          onSubmit={onSubmit}
+          email={email}
+          password={password}
+          error={error}
+          busy={busy}
+          setEmail={setEmail}
+          setPassword={setPassword}
+        />
+      </div>
+
+      <div className="relative hidden min-h-screen lg:block">
+        <Image
+          src="/login-pos.jpg"
+          alt="Hardware POS checkout counter with scanner and terminal"
+          fill
+          priority
+          className="object-cover"
+          sizes="50vw"
+        />
+        <div className="absolute inset-0 bg-gradient-to-l from-transparent via-slate-900/20 to-slate-900/70" />
+        <div className="absolute inset-x-0 bottom-0 p-10">
+          <p className="text-2xl font-semibold text-white">Sell faster. Track everything.</p>
+          <p className="mt-2 max-w-md text-sm text-slate-200">
+            Barcode scanning, inventory, warranties, and checkout — built for hardware retail.
+          </p>
+        </div>
+      </div>
     </div>
   );
 }
@@ -60,10 +89,10 @@ function LoginPanel({
   setPassword: (v: string) => void;
 }) {
   return (
-    <div className="w-full max-w-md rounded-2xl border border-slate-700 bg-slate-800 p-8 shadow-xl">
-      <h1 className="text-2xl font-semibold text-teal-400">Hardware POS</h1>
-      <p className="mt-1 text-sm text-slate-400">Sign in to continue</p>
-      <form onSubmit={onSubmit} className="mt-8 space-y-4">
+    <div className="mx-auto w-full max-w-md lg:mx-0">
+      <h1 className="text-3xl font-semibold text-teal-400">Hardware POS</h1>
+      <p className="mt-2 text-sm text-slate-400">Sign in to continue</p>
+      <form onSubmit={onSubmit} className="mt-8 flex w-full flex-col gap-4">
         {error ? <Alert tone="error">{error}</Alert> : null}
         <Field label="Email">
           <Input
@@ -72,7 +101,7 @@ function LoginPanel({
             onChange={(e) => setEmail(e.target.value)}
             required
             autoComplete="username"
-            className="border-slate-600 bg-slate-900 text-white"
+            className="w-full border-slate-600 bg-slate-800 text-white"
           />
         </Field>
         <Field label="Password">
@@ -82,7 +111,7 @@ function LoginPanel({
             onChange={(e) => setPassword(e.target.value)}
             required
             autoComplete="current-password"
-            className="border-slate-600 bg-slate-900 text-white"
+            className="w-full border-slate-600 bg-slate-800 text-white"
           />
         </Field>
         <Btn type="submit" disabled={busy} className="w-full py-3 text-base">
