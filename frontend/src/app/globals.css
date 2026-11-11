@@ -64,8 +64,8 @@ body {
 .label-card {
   box-sizing: border-box;
   width: 50mm;
-  min-height: 28mm;
-  padding: 3mm 3.5mm;
+  min-height: 32mm;
+  padding: 2.5mm 3mm;
   background: #fff;
   border: 1px solid #cbd5e1;
   text-align: center;
@@ -74,9 +74,9 @@ body {
 }
 
 .label-code {
-  margin: 0 0 2mm;
+  margin: 0 0 1.5mm;
   font-family: var(--font-ibm-plex-mono), ui-monospace, monospace;
-  font-size: 11pt;
+  font-size: 10pt;
   font-weight: 600;
   letter-spacing: 0.04em;
   color: #000;

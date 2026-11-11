@@ -230,6 +230,7 @@ export default function ProductsPage() {
             </Th>
             <Th>Name</Th>
             <Th>SKU</Th>
+            <Th>Barcode</Th>
             <Th>Stock</Th>
             <Th>Retail</Th>
             {canSeeCost ? <Th>Cost</Th> : null}
@@ -249,6 +250,7 @@ export default function ProductsPage() {
               </Td>
               <Td>{p.name}</Td>
               <Td className="font-mono text-xs">{p.sku}</Td>
+              <Td className="font-mono text-xs">{p.barcode || "—"}</Td>
               <Td className="font-mono">{Number(p.stock_qty ?? 0)}</Td>
               <Td className="font-mono">{formatBDT(p.retail_price)}</Td>
               {canSeeCost ? <Td className="font-mono">{formatBDT(p.cost)}</Td> : null}
