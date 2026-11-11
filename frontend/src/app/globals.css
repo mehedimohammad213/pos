@@ -56,5 +56,40 @@ body {
 .label-sheet {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 4mm;
+  align-content: flex-start;
+  padding: 4mm;
+}
+
+.label-card {
+  box-sizing: border-box;
+  width: 50mm;
+  min-height: 28mm;
+  padding: 3mm 3.5mm;
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  text-align: center;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+.label-code {
+  margin: 0 0 2mm;
+  font-family: var(--font-ibm-plex-mono), ui-monospace, monospace;
+  font-size: 11pt;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: #000;
+  line-height: 1.1;
+}
+
+.label-barcode {
+  max-width: 100%;
+  height: auto;
+}
+
+@media print {
+  .label-card {
+    border-color: transparent;
+  }
 }

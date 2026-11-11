@@ -1,28 +1,75 @@
 "use client";
 
-import { QRCodeSVG } from "qrcode.react";
+import JsBarcode from "jsbarcode";
+import { useEffect, useRef } from "react";
+
+export type ProductLabelItem = {
+  name: string;
+  barcode?: string;
+  price: number;
+  sku?: string;
+};
+
+function BarcodeSvg({ value }: { value: string }) {
+  const ref = useRef<SVGSVGElement>(null);
+
+  useEffect(() => {
+    if (!ref.current || !value) return;
+    try {
+      JsBarcode(ref.current, value, {
+        format: "CODE128",
+        displayValue: false,
+        margin: 0,
+        width: 1.6,
+        height: 42,
+        background: "#ffffff",
+        lineColor: "#000000",
+      });
+    } catch {
+      // Invalid characters for CODE128 — still show the text above.
+      ref.current.innerHTML = "";
+    }
+  }, [value]);
+
+  return <svg ref={ref} className="label-barcode mx-auto block" />;
+}
+
+function LabelCard({ barcode, sku, name }: ProductLabelItem) {
+  const code = barcode || sku || name;
+  return (
+    <div className="label-card">
+      <p className="label-code">{code}</p>
+      <BarcodeSvg value={code} />
+    </div>
+  );
+}
 
 export function ProductLabelPrint({
   name,
   barcode,
   price,
   sku,
-}: {
-  name: string;
-  barcode?: string;
-  price: number;
-  sku?: string;
-}) {
-  const code = barcode || sku || name;
+}: ProductLabelItem) {
   return (
     <div className="label-sheet print-only">
-      <div className="inline-block border border-slate-400 p-3 text-center">
-        <p className="text-xs font-semibold">{name}</p>
-        {sku ? <p className="text-[10px] text-slate-600">SKU: {sku}</p> : null}
-        <QRCodeSVG value={code} size={80} className="mx-auto my-2" />
-        <p className="font-mono text-sm">{code}</p>
-        <p className="text-sm font-semibold">৳{price}</p>
-      </div>
+      <LabelCard name={name} barcode={barcode} price={price} sku={sku} />
+    </div>
+  );
+}
+
+export function ProductLabelsPrint({ items }: { items: ProductLabelItem[] }) {
+  if (!items.length) return null;
+  return (
+    <div className="label-sheet print-only">
+      {items.map((item, i) => (
+        <LabelCard
+          key={`${item.barcode || item.sku || item.name}-${i}`}
+          name={item.name}
+          barcode={item.barcode}
+          price={item.price}
+          sku={item.sku}
+        />
+      ))}
     </div>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { ProductLabelPrint } from "@/components/ProductLabel";
+import { useEffect, useMemo, useState } from "react";
+import { ProductLabelPrint, ProductLabelsPrint } from "@/components/ProductLabel";
 import { Alert, Btn, Field, Input, Modal, PageHeader, Select, TableWrap, Td, Th } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -33,6 +33,9 @@ export default function ProductsPage() {
   const [open, setOpen] = useState(false);
   const [adjust, setAdjust] = useState<{ id: string; qty: string; note: string } | null>(null);
   const [label, setLabel] = useState<Product | null>(null);
+  const [printLabels, setPrintLabels] = useState<Product[] | null>(null);
+  const [autoPrint, setAutoPrint] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
   const [error, setError] = useState("");
   const [msg, setMsg] = useState("");
 
@@ -53,6 +56,65 @@ export default function ProductsPage() {
     const t = setTimeout(() => void load(), 300);
     return () => clearTimeout(t);
   }, [q]);
+
+  useEffect(() => {
+    setSelected((prev) => {
+      const ids = new Set(rows.map((p) => p.id));
+      const next = new Set<string>();
+      for (const id of prev) if (ids.has(id)) next.add(id);
+      return next;
+    });
+  }, [rows]);
+
+  const allSelected = rows.length > 0 && selected.size === rows.length;
+  const someSelected = selected.size > 0 && selected.size < rows.length;
+
+  const selectedProducts = useMemo(
+    () => rows.filter((p) => selected.has(p.id)),
+    [rows, selected]
+  );
+
+  function toggleOne(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleAll() {
+    if (allSelected) setSelected(new Set());
+    else setSelected(new Set(rows.map((p) => p.id)));
+  }
+
+  useEffect(() => {
+    if (!autoPrint || !printLabels?.length) return;
+    const t = window.setTimeout(() => {
+      window.print();
+      setAutoPrint(false);
+    }, 300);
+    return () => window.clearTimeout(t);
+  }, [autoPrint, printLabels]);
+
+  function openBarcodePrint(products: Product[], printNow = false) {
+    if (!products.length) {
+      setError("No products to print");
+      return;
+    }
+    setLabel(null);
+    setError("");
+    setPrintLabels(products);
+    setAutoPrint(printNow);
+  }
+
+  function printBarcodes() {
+    if (!selected.size) {
+      setError("Select products with the checkbox first");
+      return;
+    }
+    openBarcodePrint(selectedProducts, true);
+  }
 
   async function save() {
     setError("");
@@ -116,7 +178,16 @@ export default function ProductsPage() {
 
   return (
     <div>
+      <div className="no-print">
       <PageHeader title="Products">
+        <Btn
+          variant="secondary"
+          onClick={printBarcodes}
+          disabled={!selected.size}
+          title={selected.size ? `Print ${selected.size} selected barcode(s)` : "Select products first"}
+        >
+          {selected.size ? `Print barcodes (${selected.size})` : "Print barcodes"}
+        </Btn>
         <Btn
           onClick={() => {
             setOpen(true);
@@ -129,10 +200,34 @@ export default function ProductsPage() {
       </PageHeader>
       {error ? <Alert tone="error">{error}</Alert> : null}
       {msg ? <Alert tone="success">{msg}</Alert> : null}
-      <Input className="mb-4 max-w-md" placeholder="Search…" value={q} onChange={(e) => setQ(e.target.value)} />
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <Input className="max-w-md" placeholder="Search…" value={q} onChange={(e) => setQ(e.target.value)} />
+        {selected.size > 0 ? (
+          <span className="text-sm text-slate-600">
+            {selected.size} selected
+            <button type="button" className="ml-2 text-teal-700 hover:underline" onClick={() => setSelected(new Set())}>
+              Clear
+            </button>
+          </span>
+        ) : (
+          <span className="text-sm text-slate-500">Check products, then Print barcodes</span>
+        )}
+      </div>
       <TableWrap>
         <thead>
           <tr>
+            <Th>
+              <input
+                type="checkbox"
+                aria-label="Select all products"
+                checked={allSelected}
+                ref={(el) => {
+                  if (el) el.indeterminate = someSelected;
+                }}
+                onChange={toggleAll}
+                disabled={!rows.length}
+              />
+            </Th>
             <Th>Name</Th>
             <Th>SKU</Th>
             <Th>Stock</Th>
@@ -143,7 +238,15 @@ export default function ProductsPage() {
         </thead>
         <tbody>
           {rows.map((p) => (
-            <tr key={p.id}>
+            <tr key={p.id} className={selected.has(p.id) ? "bg-teal-50/60" : undefined}>
+              <Td>
+                <input
+                  type="checkbox"
+                  aria-label={`Select ${p.name}`}
+                  checked={selected.has(p.id)}
+                  onChange={() => toggleOne(p.id)}
+                />
+              </Td>
               <Td>{p.name}</Td>
               <Td className="font-mono text-xs">{p.sku}</Td>
               <Td className="font-mono">{Number(p.stock_qty ?? 0)}</Td>
@@ -161,7 +264,14 @@ export default function ProductsPage() {
                   >
                     Stock
                   </Btn>
-                  <Btn variant="ghost" className="px-2 py-1 text-xs" onClick={() => setLabel(p)}>
+                  <Btn
+                    variant="ghost"
+                    className="px-2 py-1 text-xs"
+                    onClick={() => {
+                      setPrintLabels(null);
+                      setLabel(p);
+                    }}
+                  >
                     Label
                   </Btn>
                 </div>
@@ -170,6 +280,7 @@ export default function ProductsPage() {
           ))}
         </tbody>
       </TableWrap>
+      </div>
 
       <Modal open={open} onClose={() => setOpen(false)} title={editId ? "Edit product" : "New product"} wide>
         <div className="grid gap-3 sm:grid-cols-2">
@@ -255,18 +366,44 @@ export default function ProductsPage() {
       </Modal>
 
       {label ? (
-        <div className="no-print mt-6">
-          <Btn onClick={() => window.print()}>Print label</Btn>
+        <>
+          <div className="no-print mt-6 flex flex-wrap items-center gap-2">
+            <Btn onClick={() => window.print()}>Print label</Btn>
+            <Btn variant="ghost" onClick={() => setLabel(null)}>
+              Close preview
+            </Btn>
+          </div>
           <ProductLabelPrint
             name={label.name}
             barcode={label.barcode}
             sku={label.sku}
             price={Number(label.retail_price)}
           />
-          <Btn variant="ghost" className="mt-2" onClick={() => setLabel(null)}>
-            Close preview
-          </Btn>
-        </div>
+        </>
+      ) : null}
+
+      {printLabels ? (
+        <>
+          <div className="no-print mt-6 flex flex-wrap items-center gap-2">
+            <Btn onClick={() => window.print()}>
+              Print {printLabels.length} barcode{printLabels.length === 1 ? "" : "s"}
+            </Btn>
+            <Btn variant="ghost" onClick={() => setPrintLabels(null)}>
+              Close preview
+            </Btn>
+            <span className="text-sm text-slate-600">
+              {printLabels.length} product label{printLabels.length === 1 ? "" : "s"} ready
+            </span>
+          </div>
+          <ProductLabelsPrint
+            items={printLabels.map((p) => ({
+              name: p.name,
+              barcode: p.barcode,
+              sku: p.sku,
+              price: Number(p.retail_price),
+            }))}
+          />
+        </>
       ) : null}
     </div>
   );
