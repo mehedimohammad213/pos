@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { BarcodeInputs } from "@/components/BarcodeInputs";
 import { ProductLabelPrint, ProductLabelsPrint } from "@/components/ProductLabel";
 import { Alert, Btn, Field, Input, Modal, PageHeader, Select, TableWrap, Td, Th } from "@/components/ui";
 import { api } from "@/lib/api";
@@ -188,15 +190,9 @@ export default function ProductsPage() {
         >
           {selected.size ? `Print barcodes (${selected.size})` : "Print barcodes"}
         </Btn>
-        <Btn
-          onClick={() => {
-            setOpen(true);
-            setEditId(null);
-            setForm(emptyForm);
-          }}
-        >
-          Add product
-        </Btn>
+        <Link href="/products/new">
+          <Btn>Add product</Btn>
+        </Link>
       </PageHeader>
       {error ? <Alert tone="error">{error}</Alert> : null}
       {msg ? <Alert tone="success">{msg}</Alert> : null}
@@ -292,9 +288,13 @@ export default function ProductsPage() {
           <Field label="SKU">
             <Input value={form.sku} onChange={(e) => setForm({ ...form, sku: e.target.value })} />
           </Field>
-          <Field label="Barcode">
-            <Input value={form.barcode} onChange={(e) => setForm({ ...form, barcode: e.target.value })} />
-          </Field>
+          <div className="sm:col-span-2">
+            <BarcodeInputs
+              barcode={form.barcode}
+              onChange={(b) => setForm((prev) => ({ ...prev, barcode: b }))}
+              excludeProductId={editId ?? undefined}
+            />
+          </div>
           <Field label="Category">
             <Select value={form.category_id} onChange={(e) => setForm({ ...form, category_id: e.target.value })}>
               <option value="">—</option>
