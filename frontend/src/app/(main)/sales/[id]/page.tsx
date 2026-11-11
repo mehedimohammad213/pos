@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -8,7 +8,7 @@ import type { Product, Sale } from "@/lib/types";
 import { Alert, Btn, Field, Input, PageHeader, TableWrap, Td, Th } from "@/components/ui";
 import { formatBDT, formatDate } from "@/lib/format";
 
-export default function SaleDetailPage() {
+function SaleDetailContent() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const { hasPermission } = useAuth();
@@ -229,6 +229,14 @@ export default function SaleDetailPage() {
         </div>
       ) : null}
     </div>
+  );
+}
+
+export default function SaleDetailPage() {
+  return (
+    <Suspense fallback={<div className="p-6 text-slate-500">Loading sale details…</div>}>
+      <SaleDetailContent />
+    </Suspense>
   );
 }
 

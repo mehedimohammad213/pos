@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import type { PurchaseDemand, Supplier } from "@/lib/types";
@@ -9,7 +9,7 @@ import { formatBDT } from "@/lib/format";
 
 const STATUSES = ["draft", "ordered", "partially_received", "received", "cancelled"];
 
-export default function DemandDetailPage() {
+function DemandDetailContent() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const [demand, setDemand] = useState<PurchaseDemand | null>(null);
@@ -156,5 +156,13 @@ export default function DemandDetailPage() {
         </div>
       ) : null}
     </div>
+  );
+}
+
+export default function DemandDetailPage() {
+  return (
+    <Suspense fallback={<div className="p-6 text-slate-500">Loading demand…</div>}>
+      <DemandDetailContent />
+    </Suspense>
   );
 }

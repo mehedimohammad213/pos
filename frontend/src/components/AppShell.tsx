@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, type ReactNode } from "react";
+import { Suspense, useState, type ReactNode } from "react";
 import { useAuth } from "@/lib/auth";
 import type { PermissionKey } from "@/lib/types";
 
@@ -31,8 +31,49 @@ const NAV: NavItem[] = [
   { href: "/settings", label: "Settings", icon: "⚙" },
 ];
 
-export function AppShell({ children }: { children: ReactNode }) {
+function SidebarNav({ items, onClose }: { items: NavItem[]; onClose: () => void }) {
   const pathname = usePathname();
+  const isActive = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
+
+  return (
+    <>
+      {items.map((item) => (
+        <Link
+          key={item.href}
+          href={item.href}
+          onClick={onClose}
+          className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+            isActive(item.href)
+              ? "bg-teal-600 text-white"
+              : "text-slate-300 hover:bg-slate-800 hover:text-white"
+          }`}
+        >
+          <span className="w-5 text-center text-teal-400">{item.icon}</span>
+          {item.label}
+        </Link>
+      ))}
+    </>
+  );
+}
+
+function NavFallback({ items }: { items: NavItem[] }) {
+  return (
+    <>
+      {items.map((item) => (
+        <Link
+          key={item.href}
+          href={item.href}
+          className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
+        >
+          <span className="w-5 text-center text-teal-400">{item.icon}</span>
+          {item.label}
+        </Link>
+      ))}
+    </>
+  );
+}
+
+export function AppShell({ children }: { children: ReactNode }) {
   const { user, logout, hasPermission } = useAuth();
   const [open, setOpen] = useState(false);
 
@@ -41,8 +82,6 @@ export function AppShell({ children }: { children: ReactNode }) {
     if (item.roles && user && !item.roles.includes(user.role) && user.role !== "admin") return false;
     return true;
   });
-
-  const isActive = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
 
   return (
     <div className="flex min-h-screen bg-slate-100 text-slate-900">
@@ -56,21 +95,9 @@ export function AppShell({ children }: { children: ReactNode }) {
           <p className="mt-1 truncate text-xs text-slate-400">{user?.name}</p>
         </div>
         <nav className="flex-1 space-y-0.5 overflow-y-auto p-2">
-          {visibleNav.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={() => setOpen(false)}
-              className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
-                isActive(item.href)
-                  ? "bg-teal-600 text-white"
-                  : "text-slate-300 hover:bg-slate-800 hover:text-white"
-              }`}
-            >
-              <span className="w-5 text-center text-teal-400">{item.icon}</span>
-              {item.label}
-            </Link>
-          ))}
+          <Suspense fallback={<NavFallback items={visibleNav} />}>
+            <SidebarNav items={visibleNav} onClose={() => setOpen(false)} />
+          </Suspense>
         </nav>
         <div className="border-t border-slate-700 p-3">
           <button
