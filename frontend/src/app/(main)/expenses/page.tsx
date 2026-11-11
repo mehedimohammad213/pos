@@ -4,23 +4,18 @@ import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { Alert, Btn, Field, Input, Modal, PageHeader, Select, TableWrap, Td, Th } from "@/components/ui";
 import { formatBDT, formatDate, todayISO } from "@/lib/format";
+import { useMonthStartState, useTodayState } from "@/lib/use-client-date";
 
 type ExpenseRow = { id: string; amount: number; note?: string; expense_date?: string; category_name?: string };
 type ExpenseCategory = { id: string; name: string };
 
-function monthStartISO(): string {
-  const d = new Date();
-  d.setDate(1);
-  return d.toISOString().slice(0, 10);
-}
-
 export default function ExpensesPage() {
   const [rows, setRows] = useState<ExpenseRow[]>([]);
   const [categories, setCategories] = useState<ExpenseCategory[]>([]);
-  const [from, setFrom] = useState(monthStartISO());
-  const [to, setTo] = useState(todayISO());
+  const [from, setFrom] = useMonthStartState();
+  const [to, setTo] = useTodayState();
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ category_id: "", amount: "", expense_date: todayISO(), note: "" });
+  const [form, setForm] = useState({ category_id: "", amount: "", expense_date: "", note: "" });
   const [error, setError] = useState("");
 
   async function load() {
@@ -33,6 +28,11 @@ export default function ExpensesPage() {
   }, []);
 
   useEffect(() => {
+    setForm((f) => (f.expense_date ? f : { ...f, expense_date: todayISO() }));
+  }, []);
+
+  useEffect(() => {
+    if (!from || !to) return;
     void load();
   }, [from, to]);
 

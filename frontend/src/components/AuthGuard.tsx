@@ -19,15 +19,18 @@ export function AuthGuard({ children }: { children: ReactNode }) {
     }
   }, [loading, user, router]);
 
-  if (loading) {
+  // Always keep `{children}` in the tree so Instant Navigation can validate
+  // route segments (AuthGuard must not drop the page during loading/redirect).
+  if (loading || !user) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-100">
-        <p className="text-slate-600">Loading…</p>
-      </div>
+      <>
+        <div className="flex min-h-screen items-center justify-center bg-slate-100">
+          <p className="text-slate-600">{loading ? "Loading…" : "Redirecting…"}</p>
+        </div>
+        <div hidden>{children}</div>
+      </>
     );
   }
-
-  if (!user) return null;
 
   return <>{children}</>;
 }

@@ -6,6 +6,7 @@ import { Alert, Btn, Field, Input, Modal, Select } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { formatBDT } from "@/lib/format";
+import { useTodayState } from "@/lib/use-client-date";
 import type { CartItem, Customer, Product, Sale, Serial } from "@/lib/types";
 import { PAYMENT_METHODS } from "@/lib/types";
 
@@ -18,7 +19,7 @@ export default function PosPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [saleType, setSaleType] = useState<"retail" | "wholesale">("retail");
-  const [saleDate, setSaleDate] = useState(new Date().toISOString().slice(0, 10));
+  const [saleDate, setSaleDate] = useTodayState();
   const [discount, setDiscount] = useState("");
   const [notes, setNotes] = useState("");
   const [customerQ, setCustomerQ] = useState("");

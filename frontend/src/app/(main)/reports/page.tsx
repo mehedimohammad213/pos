@@ -4,15 +4,16 @@ import { useEffect, useState } from "react";
 import { api, apiText } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { Alert, Btn, Field, Input, PageHeader, Select, TableWrap, Td, Th } from "@/components/ui";
-import { formatBDT, todayISO } from "@/lib/format";
+import { formatBDT } from "@/lib/format";
+import { useTodayState } from "@/lib/use-client-date";
 
 type ReportRow = Record<string, string | number>;
 
 export default function ReportsPage() {
   const { canSeeCost, hasPermission } = useAuth();
   const [kind, setKind] = useState<"sales" | "profit" | "stock-valuation" | "exchanges" | "audit">("sales");
-  const [from, setFrom] = useState(todayISO());
-  const [to, setTo] = useState(todayISO());
+  const [from, setFrom] = useTodayState();
+  const [to, setTo] = useTodayState();
   const [groupBy, setGroupBy] = useState("product");
   const [rows, setRows] = useState<ReportRow[]>([]);
   const [error, setError] = useState("");
@@ -40,6 +41,7 @@ export default function ReportsPage() {
   }
 
   useEffect(() => {
+    if (kind !== "stock-valuation" && kind !== "audit" && (!from || !to)) return;
     void load();
   }, [kind, from, to, groupBy]);
 

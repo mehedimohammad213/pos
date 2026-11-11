@@ -5,15 +5,17 @@ import Link from "next/link";
 import { api } from "@/lib/api";
 import type { Sale } from "@/lib/types";
 import { Field, Input, PageHeader, TableWrap, Td, Th } from "@/components/ui";
-import { formatBDT, formatDate, todayISO } from "@/lib/format";
+import { formatBDT, formatDate } from "@/lib/format";
+import { useTodayState } from "@/lib/use-client-date";
 
 export default function SalesPage() {
   const [rows, setRows] = useState<Sale[]>([]);
-  const [from, setFrom] = useState(todayISO());
-  const [to, setTo] = useState(todayISO());
+  const [from, setFrom] = useTodayState();
+  const [to, setTo] = useTodayState();
   const [q, setQ] = useState("");
 
   useEffect(() => {
+    if (!from || !to) return;
     const qs = new URLSearchParams({ from, to });
     if (q) qs.set("q", q);
     void api<Sale[]>(`/sales?${qs}`).then(setRows);

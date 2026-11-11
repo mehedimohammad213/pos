@@ -20,7 +20,7 @@ export default function PurchasesPage() {
   const [payForm, setPayForm] = useState({ amount: "", method: "cash", notes: "" });
   const [purForm, setPurForm] = useState({
     supplier_id: "",
-    purchase_date: todayISO(),
+    purchase_date: "",
     invoice_no: "",
     notes: "",
     paid_amount: "",
@@ -36,6 +36,7 @@ export default function PurchasesPage() {
   useEffect(() => {
     void load();
     void api<Product[]>("/catalog/products").then(setProducts);
+    setPurForm((f) => (f.purchase_date ? f : { ...f, purchase_date: todayISO() }));
   }, []);
 
   async function addSupplier() {

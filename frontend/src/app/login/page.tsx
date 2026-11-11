@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { FormEvent, useState, Suspense } from "react";
+import { FormEvent, useEffect, useState, Suspense } from "react";
 import { useAuth } from "@/lib/auth";
 import { Alert, Btn, Field, Input } from "@/components/ui";
 
@@ -15,10 +15,11 @@ function LoginForm() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
-  if (user) {
-    router.replace(next);
-    return null;
-  }
+  useEffect(() => {
+    if (user) router.replace(next);
+  }, [user, router, next]);
+
+  if (user) return null;
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
