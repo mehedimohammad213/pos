@@ -2,22 +2,36 @@
 
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import type { Product, Serial } from "@/lib/types";
-import { Alert, Btn, Field, Input, Modal, PageHeader, Select, TableWrap, Td, Th } from "@/components/ui";
+import type { Product, Serial, PaginatedResponse } from "@/lib/types";
+import { Alert, Btn, Field, Input, Modal, PageHeader, Select, TableWrap, Td, Th, Pagination } from "@/components/ui";
 
 export default function SerialsPage() {
   const [rows, setRows] = useState<Serial[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const PAGE_SIZE = 10;
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
+
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ product_id: "", serial_numbers: "" });
+
   const [error, setError] = useState("");
 
-  async function load() {
-    setRows(await api<Serial[]>("/catalog/serials"));
+  async function load(p = page) {
+    const qs = new URLSearchParams({
+      page: String(p),
+      limit: String(PAGE_SIZE),
+    });
+    const data = await api<PaginatedResponse<Serial>>(`/catalog/serials?${qs}`);
+    setRows(data.items);
+    setTotal(data.total);
+    setTotalPages(data.totalPages);
+    setPage(data.page);
   }
 
   useEffect(() => {
-    void load();
+    void load(1);
     void api<Product[]>("/catalog/products").then(setProducts);
   }, []);
 
@@ -64,6 +78,16 @@ export default function SerialsPage() {
           ))}
         </tbody>
       </TableWrap>
+      <Pagination
+        page={page}
+        totalPages={totalPages}
+        total={total}
+        limit={PAGE_SIZE}
+        onPage={(p) => {
+          setPage(p);
+          void load(p);
+        }}
+      />
       <Modal open={open} onClose={() => setOpen(false)} title="New serial(s)">
         <Field label="Product">
           <Select value={form.product_id} onChange={(e) => setForm({ ...form, product_id: e.target.value })}>
