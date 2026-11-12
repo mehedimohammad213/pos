@@ -3,15 +3,32 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
-import type { PurchaseDemand } from "@/lib/types";
-import { PageHeader, TableWrap, Td, Th } from "@/components/ui";
+import type { PurchaseDemand, PaginatedResponse } from "@/lib/types";
+import { PageHeader, TableWrap, Td, Th, Pagination } from "@/components/ui";
 import { formatDateTime } from "@/lib/format";
+
+const PAGE_SIZE = 20;
 
 export default function DemandsPage() {
   const [rows, setRows] = useState<PurchaseDemand[]>([]);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
+
+  async function load(p = page) {
+    const qs = new URLSearchParams({
+      page: String(p),
+      limit: String(PAGE_SIZE),
+    });
+    const data = await api<PaginatedResponse<PurchaseDemand>>(`/purchases/demands?${qs}`);
+    setRows(data.items);
+    setTotal(data.total);
+    setTotalPages(data.totalPages);
+    setPage(data.page);
+  }
 
   useEffect(() => {
-    void api<PurchaseDemand[]>("/purchases/demands").then(setRows);
+    void load(1);
   }, []);
 
   return (
@@ -41,6 +58,16 @@ export default function DemandsPage() {
           ))}
         </tbody>
       </TableWrap>
+      <Pagination
+        page={page}
+        totalPages={totalPages}
+        total={total}
+        limit={PAGE_SIZE}
+        onPage={(p) => {
+          setPage(p);
+          void load(p);
+        }}
+      />
     </div>
   );
 }

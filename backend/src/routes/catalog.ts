@@ -42,6 +42,9 @@ router.post('/brands', authRequired, requireRoles('admin', 'manager', 'stock'), 
 
 router.get('/products', authRequired, async (req, res, next) => {
   try {
+    const page = req.query.page !== undefined ? Number(req.query.page) : undefined;
+    const limit = req.query.limit !== undefined ? Number(req.query.limit) : undefined;
+    const paginate = req.query.paginate === '1' || req.query.paginate === 'true';
     res.json(
       await catalog.listProducts({
         q: req.query.q as string | undefined,
@@ -49,6 +52,8 @@ router.get('/products', authRequired, async (req, res, next) => {
         brand_id: req.query.brand_id as string | undefined,
         low_stock: req.query.low_stock === '1',
         include_inactive: req.query.include_inactive === '1',
+        page: page !== undefined || paginate ? (page || 1) : undefined,
+        limit: limit !== undefined || paginate ? (limit || 20) : undefined,
       })
     );
   } catch (e) {
@@ -130,11 +135,16 @@ router.post('/stock/adjust', authRequired, requireRoles('admin', 'manager', 'sto
 
 router.get('/serials', authRequired, async (req, res, next) => {
   try {
+    const page = req.query.page !== undefined ? Number(req.query.page) : undefined;
+    const limit = req.query.limit !== undefined ? Number(req.query.limit) : undefined;
+    const paginate = req.query.paginate === '1' || req.query.paginate === 'true';
     res.json(
       await catalog.listSerials({
         product_id: req.query.product_id as string | undefined,
         status: req.query.status as string | undefined,
         q: req.query.q as string | undefined,
+        page: page !== undefined || paginate ? (page || 1) : undefined,
+        limit: limit !== undefined || paginate ? (limit || 20) : undefined,
       })
     );
   } catch (e) {

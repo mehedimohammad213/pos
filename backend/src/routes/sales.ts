@@ -17,6 +17,9 @@ const lineSchema = z.object({
 
 router.get('/', authRequired, async (req, res, next) => {
   try {
+    const page = req.query.page !== undefined ? Number(req.query.page) : undefined;
+    const limit = req.query.limit !== undefined ? Number(req.query.limit) : undefined;
+    const paginate = req.query.paginate === '1' || req.query.paginate === 'true';
     res.json(
       await sales.listSales({
         from: req.query.from as string | undefined,
@@ -24,6 +27,8 @@ router.get('/', authRequired, async (req, res, next) => {
         status: req.query.status as string | undefined,
         sale_type: req.query.sale_type as string | undefined,
         q: req.query.q as string | undefined,
+        page: page !== undefined || paginate ? (page || 1) : undefined,
+        limit: limit !== undefined || paginate ? (limit || 20) : undefined,
       })
     );
   } catch (e) {
@@ -39,17 +44,29 @@ router.get('/held', authRequired, async (_req, res, next) => {
   }
 });
 
-router.get('/returns/list', authRequired, async (_req, res, next) => {
+router.get('/returns/list', authRequired, async (req, res, next) => {
   try {
-    res.json(await returns.listReturns());
+    const page = req.query.page !== undefined ? Number(req.query.page) : undefined;
+    const limit = req.query.limit !== undefined ? Number(req.query.limit) : undefined;
+    const paginate = req.query.paginate === '1' || req.query.paginate === 'true';
+    res.json(await returns.listReturns({
+      page: page !== undefined || paginate ? (page || 1) : undefined,
+      limit: limit !== undefined || paginate ? (limit || 20) : undefined,
+    }));
   } catch (e) {
     next(e);
   }
 });
 
-router.get('/exchanges/list', authRequired, async (_req, res, next) => {
+router.get('/exchanges/list', authRequired, async (req, res, next) => {
   try {
-    res.json(await returns.listExchanges());
+    const page = req.query.page !== undefined ? Number(req.query.page) : undefined;
+    const limit = req.query.limit !== undefined ? Number(req.query.limit) : undefined;
+    const paginate = req.query.paginate === '1' || req.query.paginate === 'true';
+    res.json(await returns.listExchanges({
+      page: page !== undefined || paginate ? (page || 1) : undefined,
+      limit: limit !== undefined || paginate ? (limit || 20) : undefined,
+    }));
   } catch (e) {
     next(e);
   }

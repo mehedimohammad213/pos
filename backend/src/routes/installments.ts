@@ -8,7 +8,13 @@ const router = Router();
 
 router.get('/', authRequired, async (req, res, next) => {
   try {
-    res.json(await emi.listPlans(req.query.status as string | undefined));
+    const page = req.query.page !== undefined ? Number(req.query.page) : undefined;
+    const limit = req.query.limit !== undefined ? Number(req.query.limit) : undefined;
+    const paginate = req.query.paginate === '1' || req.query.paginate === 'true';
+    res.json(await emi.listPlans(req.query.status as string | undefined, {
+      page: page !== undefined || paginate ? (page || 1) : undefined,
+      limit: limit !== undefined || paginate ? (limit || 20) : undefined,
+    }));
   } catch (e) {
     next(e);
   }

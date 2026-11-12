@@ -3,22 +3,36 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
-import type { Sale } from "@/lib/types";
-import { Field, Input, PageHeader, TableWrap, Td, Th } from "@/components/ui";
+import type { PaginatedResponse, Sale } from "@/lib/types";
+import { Field, Input, PageHeader, Pagination, TableWrap, Td, Th } from "@/components/ui";
 import { formatBDT, formatDate } from "@/lib/format";
 import { useTodayState } from "@/lib/use-client-date";
+
+const PAGE_SIZE = 20;
 
 export default function SalesPage() {
   const [rows, setRows] = useState<Sale[]>([]);
   const [from, setFrom] = useTodayState();
   const [to, setTo] = useTodayState();
   const [q, setQ] = useState("");
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
+
+  async function load(p = page) {
+    if (!from || !to) return;
+    const qs = new URLSearchParams({ from, to, page: String(p), limit: String(PAGE_SIZE) });
+    if (q) qs.set("q", q);
+    const data = await api<PaginatedResponse<Sale>>(`/sales?${qs}`);
+    setRows(data.items);
+    setTotal(data.total);
+    setTotalPages(data.totalPages);
+    setPage(data.page);
+  }
 
   useEffect(() => {
-    if (!from || !to) return;
-    const qs = new URLSearchParams({ from, to });
-    if (q) qs.set("q", q);
-    void api<Sale[]>(`/sales?${qs}`).then(setRows);
+    setPage(1);
+    void load(1);
   }, [from, to, q]);
 
   return (
@@ -63,6 +77,13 @@ export default function SalesPage() {
           ))}
         </tbody>
       </TableWrap>
+      <Pagination
+        page={page}
+        totalPages={totalPages}
+        total={total}
+        limit={PAGE_SIZE}
+        onPage={(p) => { setPage(p); void load(p); }}
+      />
     </div>
   );
 }

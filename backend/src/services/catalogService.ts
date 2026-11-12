@@ -2,6 +2,7 @@ import { PoolClient } from 'pg';
 import { query, withTransaction } from '../db/pool';
 import { AppError, assertFound } from '../utils/errors';
 import { writeAudit } from './auditService';
+import { formatPaginatedResponse } from '../utils/pagination';
 
 export async function listCategories() {
   const r = await query(`SELECT * FROM categories WHERE deleted_at IS NULL ORDER BY name`);
@@ -32,6 +33,8 @@ export async function listProducts(params: {
   brand_id?: string;
   low_stock?: boolean;
   include_inactive?: boolean;
+  page?: number;
+  limit?: number;
 }) {
   const where: string[] = ['p.deleted_at IS NULL'];
   const values: unknown[] = [];
@@ -53,6 +56,39 @@ export async function listProducts(params: {
   if (params.low_stock) {
     where.push(`COALESCE(ps.quantity,0) <= p.reorder_level`);
   }
+
+  const isPaginated = params.page !== undefined || params.limit !== undefined;
+
+  if (isPaginated) {
+    const page = Math.max(1, Number(params.page) || 1);
+    const limit = Math.min(100, Math.max(1, Number(params.limit) || 20));
+    const offset = (page - 1) * limit;
+
+    const countRes = await query(
+      `SELECT COUNT(DISTINCT p.id)::int AS total
+       FROM products p
+       LEFT JOIN product_stock ps ON ps.product_id = p.id
+       WHERE ${where.join(' AND ')}`,
+      values
+    );
+    const total = Number(countRes.rows[0]?.total || 0);
+
+    const dataValues = [...values, limit, offset];
+    const r = await query(
+      `SELECT p.*, c.name AS category_name, b.name AS brand_name,
+              COALESCE(ps.quantity,0) AS stock_qty
+       FROM products p
+       LEFT JOIN categories c ON c.id = p.category_id
+       LEFT JOIN brands b ON b.id = p.brand_id
+       LEFT JOIN product_stock ps ON ps.product_id = p.id
+       WHERE ${where.join(' AND ')}
+       ORDER BY p.name
+       LIMIT $${i++} OFFSET $${i++}`,
+      dataValues
+    );
+    return formatPaginatedResponse(r.rows, total, page, limit);
+  }
+
   const r = await query(
     `SELECT p.*, c.name AS category_name, b.name AS brand_name,
             COALESCE(ps.quantity,0) AS stock_qty
@@ -557,7 +593,13 @@ export async function adjustStock(
   });
 }
 
-export async function listSerials(params: { product_id?: string; status?: string; q?: string }) {
+export async function listSerials(params: {
+  product_id?: string;
+  status?: string;
+  q?: string;
+  page?: number;
+  limit?: number;
+}) {
   const where: string[] = ['1=1'];
   const values: unknown[] = [];
   let i = 1;
@@ -573,6 +615,33 @@ export async function listSerials(params: { product_id?: string; status?: string
     where.push(`s.serial_number ILIKE $${i++}`);
     values.push(`%${params.q}%`);
   }
+
+  const isPaginated = params.page !== undefined || params.limit !== undefined;
+  if (isPaginated) {
+    const page = Math.max(1, Number(params.page) || 1);
+    const limit = Math.min(100, Math.max(1, Number(params.limit) || 20));
+    const offset = (page - 1) * limit;
+
+    const countRes = await query(
+      `SELECT COUNT(*)::int AS total
+       FROM serials s JOIN products p ON p.id = s.product_id
+       WHERE ${where.join(' AND ')}`,
+      values
+    );
+    const total = Number(countRes.rows[0]?.total || 0);
+
+    const dataValues = [...values, limit, offset];
+    const r = await query(
+      `SELECT s.*, p.name AS product_name, p.sku
+       FROM serials s JOIN products p ON p.id = s.product_id
+       WHERE ${where.join(' AND ')}
+       ORDER BY s.created_at DESC
+       LIMIT $${i++} OFFSET $${i++}`,
+      dataValues
+    );
+    return formatPaginatedResponse(r.rows, total, page, limit);
+  }
+
   const r = await query(
     `SELECT s.*, p.name AS product_name, p.sku
      FROM serials s JOIN products p ON p.id = s.product_id

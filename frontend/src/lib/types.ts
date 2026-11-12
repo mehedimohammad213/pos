@@ -8,6 +8,15 @@ export type PermissionKey =
   | "manage_users"
   | "walkin_exchange";
 
+export type PaginatedResponse<T> = {
+  items: T[];
+  data: T[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+};
+
 export type AuthUser = {
   id: string;
   role: string;

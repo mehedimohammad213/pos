@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import { Alert, Btn, Field, Input, Modal, PageHeader, TableWrap, Td, Th } from "@/components/ui";
+import { Alert, Btn, Field, Input, Modal, PageHeader, TableWrap, Td, Th, Pagination } from "@/components/ui";
+import type { PaginatedResponse } from "@/lib/types";
 import { formatBDT, formatDate } from "@/lib/format";
 
 type EmiPlan = {
@@ -25,21 +26,54 @@ type OverdueDue = {
 };
 
 export default function InstallmentsPage() {
+  const PAGE_SIZE = 10;
   const [plans, setPlans] = useState<EmiPlan[]>([]);
   const [overdue, setOverdue] = useState<OverdueDue[]>([]);
+  const [pagePlans, setPagePlans] = useState(1);
+  const [totalPagesPlans, setTotalPagesPlans] = useState(1);
+  const [totalPlans, setTotalPlans] = useState(0);
+  const [pageOverdue, setPageOverdue] = useState(1);
+  const [totalPagesOverdue, setTotalPagesOverdue] = useState(1);
+  const [totalOverdue, setTotalOverdue] = useState(0);
   const [payTarget, setPayTarget] = useState<OverdueDue | null>(null);
   const [payForm, setPayForm] = useState({ amount: "", method: "cash", notes: "" });
   const [error, setError] = useState("");
   const [msg, setMsg] = useState("");
 
-  async function load() {
-    setPlans(await api<EmiPlan[]>("/installments"));
-    setOverdue(await api<OverdueDue[]>("/installments/overdue"));
+
+// Load installment plans with pagination
+  async function loadPlans(p = pagePlans) {
+    const qs = new URLSearchParams({
+      page: String(p),
+      limit: String(PAGE_SIZE),
+    });
+    const data = await api<PaginatedResponse<EmiPlan>>(`/installments?${qs}`);
+    setPlans(data.items);
+    setTotalPlans(data.total);
+    setTotalPagesPlans(data.totalPages);
+    setPagePlans(data.page);
   }
 
+  // Load overdue installments with pagination
+  async function loadOverdue(p = pageOverdue) {
+    const qs = new URLSearchParams({
+      page: String(p),
+      limit: String(PAGE_SIZE),
+    });
+    const data = await api<PaginatedResponse<OverdueDue>>(`/installments/overdue?${qs}`);
+    setOverdue(data.items);
+    setTotalOverdue(data.total);
+    setTotalPagesOverdue(data.totalPages);
+    setPageOverdue(data.page);
+  }
+
+  // Initial load for both tables
   useEffect(() => {
-    void load();
+    void loadPlans(1);
+    void loadOverdue(1);
   }, []);
+
+
 
   async function pay() {
     if (!payTarget) return;
@@ -55,7 +89,7 @@ export default function InstallmentsPage() {
       });
       setPayTarget(null);
       setMsg("Payment recorded");
-      await load();
+      await Promise.all([loadPlans(pagePlans), loadOverdue(pageOverdue)]);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Payment failed");
     }
@@ -99,6 +133,14 @@ export default function InstallmentsPage() {
       </TableWrap>
       </div>
 
+      <Pagination
+        page={pageOverdue}
+        totalPages={totalPagesOverdue}
+        total={totalOverdue}
+        limit={PAGE_SIZE}
+        onPage={(p) => { setPageOverdue(p); void loadOverdue(p); }}
+      />
+
       <h2 className="mb-2 font-medium text-slate-700">All plans</h2>
       <TableWrap>
         <thead>
@@ -120,6 +162,13 @@ export default function InstallmentsPage() {
           ))}
         </tbody>
       </TableWrap>
+      <Pagination
+        page={pagePlans}
+        totalPages={totalPagesPlans}
+        total={totalPlans}
+        limit={PAGE_SIZE}
+        onPage={(p) => { setPagePlans(p); void loadPlans(p); }}
+      />
 
       <Modal open={!!payTarget} onClose={() => setPayTarget(null)} title="Pay EMI">
         <Field label="Amount">

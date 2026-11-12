@@ -2,14 +2,43 @@ import { query, withTransaction } from '../db/pool';
 import { AppError, assertFound } from '../utils/errors';
 import { writeAudit } from './auditService';
 import { appendLedger } from './saleService';
+import { formatPaginatedResponse } from '../utils/pagination';
 
-export async function listPlans(status?: string) {
+export async function listPlans(status?: string, params?: { page?: number; limit?: number }) {
   const values: unknown[] = [];
   let where = '1=1';
+  let i = 1;
   if (status) {
-    where = 'p.status = $1';
+    where = `p.status = $${i++}`;
     values.push(status);
   }
+
+  const isPaginated = params?.page !== undefined || params?.limit !== undefined;
+  if (isPaginated) {
+    const page = Math.max(1, Number(params?.page) || 1);
+    const limit = Math.min(100, Math.max(1, Number(params?.limit) || 20));
+    const offset = (page - 1) * limit;
+
+    const countRes = await query(
+      `SELECT COUNT(*)::int AS total FROM installment_plans p WHERE ${where}`,
+      values
+    );
+    const total = Number(countRes.rows[0]?.total || 0);
+
+    const dataValues = [...values, limit, offset];
+    const r = await query(
+      `SELECT p.*, c.name AS customer_name, c.phone AS customer_phone, s.invoice_no
+       FROM installment_plans p
+       JOIN customers c ON c.id = p.customer_id
+       JOIN sales s ON s.id = p.sale_id
+       WHERE ${where}
+       ORDER BY p.created_at DESC
+       LIMIT $${i++} OFFSET $${i++}`,
+      dataValues
+    );
+    return formatPaginatedResponse(r.rows, total, page, limit);
+  }
+
   const r = await query(
     `SELECT p.*, c.name AS customer_name, c.phone AS customer_phone, s.invoice_no
      FROM installment_plans p

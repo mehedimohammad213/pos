@@ -4,6 +4,7 @@ import { nextDocumentNo } from '../utils/documents';
 import { AppError, assertFound } from '../utils/errors';
 import { writeAudit } from './auditService';
 import { appendLedger, createSale, getSale } from './saleService';
+import { formatPaginatedResponse } from '../utils/pagination';
 
 export async function createReturn(
   input: {
@@ -249,7 +250,25 @@ export async function createExchange(
   });
 }
 
-export async function listReturns() {
+export async function listReturns(params?: { page?: number; limit?: number }) {
+  const isPaginated = params?.page !== undefined || params?.limit !== undefined;
+  if (isPaginated) {
+    const page = Math.max(1, Number(params?.page) || 1);
+    const limit = Math.min(100, Math.max(1, Number(params?.limit) || 20));
+    const offset = (page - 1) * limit;
+    const countRes = await query(`SELECT COUNT(*)::int AS total FROM returns`);
+    const total = Number(countRes.rows[0]?.total || 0);
+    const r = await query(
+      `SELECT r.*, s.invoice_no, c.name AS customer_name
+       FROM returns r
+       JOIN sales s ON s.id = r.sale_id
+       LEFT JOIN customers c ON c.id = r.customer_id
+       ORDER BY r.created_at DESC
+       LIMIT $1 OFFSET $2`,
+      [limit, offset]
+    );
+    return formatPaginatedResponse(r.rows, total, page, limit);
+  }
   const r = await query(
     `SELECT r.*, s.invoice_no, c.name AS customer_name
      FROM returns r
@@ -260,7 +279,26 @@ export async function listReturns() {
   return r.rows;
 }
 
-export async function listExchanges() {
+export async function listExchanges(params?: { page?: number; limit?: number }) {
+  const isPaginated = params?.page !== undefined || params?.limit !== undefined;
+  if (isPaginated) {
+    const page = Math.max(1, Number(params?.page) || 1);
+    const limit = Math.min(100, Math.max(1, Number(params?.limit) || 20));
+    const offset = (page - 1) * limit;
+    const countRes = await query(`SELECT COUNT(*)::int AS total FROM exchanges`);
+    const total = Number(countRes.rows[0]?.total || 0);
+    const r = await query(
+      `SELECT e.*, os.invoice_no AS original_invoice, ns.invoice_no AS new_invoice, c.name AS customer_name
+       FROM exchanges e
+       LEFT JOIN sales os ON os.id = e.original_sale_id
+       LEFT JOIN sales ns ON ns.id = e.new_sale_id
+       LEFT JOIN customers c ON c.id = e.customer_id
+       ORDER BY e.created_at DESC
+       LIMIT $1 OFFSET $2`,
+      [limit, offset]
+    );
+    return formatPaginatedResponse(r.rows, total, page, limit);
+  }
   const r = await query(
     `SELECT e.*, os.invoice_no AS original_invoice, ns.invoice_no AS new_invoice, c.name AS customer_name
      FROM exchanges e
@@ -323,7 +361,26 @@ export async function resolveWarrantyClaim(
   return claim;
 }
 
-export async function listWarrantyClaims() {
+export async function listWarrantyClaims(params?: { page?: number; limit?: number }) {
+  const isPaginated = params?.page !== undefined || params?.limit !== undefined;
+  if (isPaginated) {
+    const page = Math.max(1, Number(params?.page) || 1);
+    const limit = Math.min(100, Math.max(1, Number(params?.limit) || 20));
+    const offset = (page - 1) * limit;
+    const countRes = await query(`SELECT COUNT(*)::int AS total FROM warranty_claims`);
+    const total = Number(countRes.rows[0]?.total || 0);
+    const r = await query(
+      `SELECT w.*, s.serial_number, p.name AS product_name, c.name AS customer_name
+       FROM warranty_claims w
+       JOIN serials s ON s.id = w.serial_id
+       JOIN products p ON p.id = s.product_id
+       LEFT JOIN customers c ON c.id = w.customer_id
+       ORDER BY w.created_at DESC
+       LIMIT $1 OFFSET $2`,
+      [limit, offset]
+    );
+    return formatPaginatedResponse(r.rows, total, page, limit);
+  }
   const r = await query(
     `SELECT w.*, s.serial_number, p.name AS product_name, c.name AS customer_name
      FROM warranty_claims w

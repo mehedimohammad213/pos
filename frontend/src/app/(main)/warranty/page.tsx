@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import { Alert, Btn, Field, Input, Modal, PageHeader, Select, TableWrap, Td, Th } from "@/components/ui";
+import { Alert, Btn, Field, Input, Modal, PageHeader, Select, TableWrap, Td, Th, Pagination } from "@/components/ui";
+import type { PaginatedResponse } from "@/lib/types";
 import { formatDate } from "@/lib/format";
 
 type WarrantyRow = {
@@ -16,6 +17,10 @@ type WarrantyRow = {
 };
 
 export default function WarrantyPage() {
+  const PAGE_SIZE = 10;
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
   const [rows, setRows] = useState<WarrantyRow[]>([]);
   const [open, setOpen] = useState(false);
   const [resolve, setResolve] = useState<WarrantyRow | null>(null);
@@ -23,13 +28,24 @@ export default function WarrantyPage() {
   const [resolution, setResolution] = useState("repair");
   const [error, setError] = useState("");
 
-  async function load() {
-    setRows(await api<WarrantyRow[]>("/warranty"));
+  async function load(p = page) {
+    const qs = new URLSearchParams({
+      page: String(p),
+      limit: String(PAGE_SIZE),
+    });
+    const data = await api<PaginatedResponse<WarrantyRow>>(`/warranty?${qs}`);
+    setRows(data.items);
+    setTotal(data.total);
+    setTotalPages(data.totalPages);
+    setPage(data.page);
   }
 
   useEffect(() => {
-    void load();
+    void load(1);
   }, []);
+
+
+  // Removed duplicated state and load definitions
 
   async function createClaim() {
     try {

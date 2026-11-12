@@ -1,14 +1,46 @@
 import { query } from '../db/pool';
 import { normalizeBdPhone } from '../utils/phone';
 import { AppError, assertFound } from '../utils/errors';
+import { formatPaginatedResponse } from '../utils/pagination';
 
-export async function listCustomers(q?: string) {
+export async function listCustomers(params?: string | {
+  q?: string;
+  page?: number;
+  limit?: number;
+}) {
+  const q = typeof params === 'string' ? params : params?.q;
+  const pageParam = typeof params === 'object' ? params?.page : undefined;
+  const limitParam = typeof params === 'object' ? params?.limit : undefined;
+
   const values: unknown[] = [];
   let where = 'deleted_at IS NULL';
+  let i = 1;
   if (q) {
-    where += ` AND (name ILIKE $1 OR phone ILIKE $1)`;
+    where += ` AND (name ILIKE $${i} OR phone ILIKE $${i})`;
     values.push(`%${q}%`);
+    i++;
   }
+
+  const isPaginated = pageParam !== undefined || limitParam !== undefined;
+  if (isPaginated) {
+    const page = Math.max(1, Number(pageParam) || 1);
+    const limit = Math.min(100, Math.max(1, Number(limitParam) || 20));
+    const offset = (page - 1) * limit;
+
+    const countRes = await query(
+      `SELECT COUNT(*)::int AS total FROM customers WHERE ${where}`,
+      values
+    );
+    const total = Number(countRes.rows[0]?.total || 0);
+
+    const dataValues = [...values, limit, offset];
+    const r = await query(
+      `SELECT * FROM customers WHERE ${where} ORDER BY name LIMIT $${i++} OFFSET $${i++}`,
+      dataValues
+    );
+    return formatPaginatedResponse(r.rows, total, page, limit);
+  }
+
   const r = await query(
     `SELECT * FROM customers WHERE ${where} ORDER BY name LIMIT 200`,
     values

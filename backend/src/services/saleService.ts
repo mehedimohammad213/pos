@@ -4,6 +4,7 @@ import { AuthUser } from '../middleware/auth';
 import { nextDocumentNo } from '../utils/documents';
 import { AppError, assertFound } from '../utils/errors';
 import { writeAudit } from './auditService';
+import { formatPaginatedResponse } from '../utils/pagination';
 
 export type SaleLineInput = {
   product_id: string;
@@ -395,6 +396,8 @@ export async function listSales(params: {
   status?: string;
   sale_type?: string;
   q?: string;
+  page?: number;
+  limit?: number;
 }) {
   const where: string[] = ['1=1'];
   const values: unknown[] = [];
@@ -420,6 +423,36 @@ export async function listSales(params: {
     values.push(`%${params.q}%`);
     i++;
   }
+
+  const isPaginated = params.page !== undefined || params.limit !== undefined;
+  if (isPaginated) {
+    const page = Math.max(1, Number(params.page) || 1);
+    const limit = Math.min(100, Math.max(1, Number(params.limit) || 20));
+    const offset = (page - 1) * limit;
+
+    const countRes = await query(
+      `SELECT COUNT(*)::int AS total
+       FROM sales s
+       LEFT JOIN customers c ON c.id = s.customer_id
+       WHERE ${where.join(' AND ')}`,
+      values
+    );
+    const total = Number(countRes.rows[0]?.total || 0);
+
+    const dataValues = [...values, limit, offset];
+    const r = await query(
+      `SELECT s.*, c.name AS customer_name, c.phone AS customer_phone, u.name AS cashier_name
+       FROM sales s
+       LEFT JOIN customers c ON c.id = s.customer_id
+       LEFT JOIN users u ON u.id = s.cashier_id
+       WHERE ${where.join(' AND ')}
+       ORDER BY s.sale_date DESC, s.created_at DESC
+       LIMIT $${i++} OFFSET $${i++}`,
+      dataValues
+    );
+    return formatPaginatedResponse(r.rows, total, page, limit);
+  }
+
   const r = await query(
     `SELECT s.*, c.name AS customer_name, c.phone AS customer_phone, u.name AS cashier_name
      FROM sales s

@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import type { Customer } from "@/lib/types";
-import { Alert, Btn, Field, Input, Modal, PageHeader, TableWrap, Td, Th } from "@/components/ui";
+import type { Customer, PaginatedResponse } from "@/lib/types";
+import { Alert, Btn, Field, Input, Modal, PageHeader, Pagination, TableWrap, Td, Th } from "@/components/ui";
 import { formatBDT } from "@/lib/format";
 
 type AgingRow = {
@@ -27,14 +27,24 @@ export default function CustomersPage() {
   const [pay, setPay] = useState({ amount: "", method: "cash", notes: "" });
   const [error, setError] = useState("");
   const [showAging, setShowAging] = useState(false);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
+  const PAGE_SIZE = 20;
 
-  async function load() {
-    const qs = q ? `?q=${encodeURIComponent(q)}` : "";
-    setRows(await api<Customer[]>(`/customers${qs}`));
+  async function load(p = page) {
+    const qs = new URLSearchParams({ page: String(p), limit: String(PAGE_SIZE) });
+    if (q) qs.set("q", q);
+    const data = await api<PaginatedResponse<Customer>>(`/customers?${qs}`);
+    setRows(data.items);
+    setTotal(data.total);
+    setTotalPages(data.totalPages);
+    setPage(data.page);
   }
 
   useEffect(() => {
-    const t = setTimeout(() => void load(), 300);
+    setPage(1);
+    const t = setTimeout(() => void load(1), 300);
     return () => clearTimeout(t);
   }, [q]);
 
@@ -47,7 +57,7 @@ export default function CustomersPage() {
       await api("/customers", { method: "POST", body: JSON.stringify(form) });
       setOpen(false);
       setForm({ name: "", phone: "", address: "" });
-      await load();
+      await load(page);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed");
     }
@@ -66,7 +76,7 @@ export default function CustomersPage() {
         }),
       });
       setCollect(null);
-      await load();
+      await load(page);
       setAging(await api<AgingRow[]>("/customers/due-aging"));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed");
@@ -140,6 +150,13 @@ export default function CustomersPage() {
           ))}
         </tbody>
       </TableWrap>
+      <Pagination
+        page={page}
+        totalPages={totalPages}
+        total={total}
+        limit={PAGE_SIZE}
+        onPage={(p) => { setPage(p); void load(p); }}
+      />
 
       <Modal open={open} onClose={() => setOpen(false)} title="New customer">
         <Field label="Name">

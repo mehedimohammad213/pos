@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import { Alert, Btn, Field, Input, Modal, PageHeader, Select, TableWrap, Td, Th } from "@/components/ui";
+import { Alert, Btn, Field, Input, Modal, PageHeader, Select, TableWrap, Td, Th, Pagination } from "@/components/ui";
+import type { PaginatedResponse } from "@/lib/types";
 import { formatBDT, formatDate, todayISO } from "@/lib/format";
 import { useMonthStartState, useTodayState } from "@/lib/use-client-date";
 
@@ -10,6 +11,12 @@ type ExpenseRow = { id: string; amount: number; note?: string; expense_date?: st
 type ExpenseCategory = { id: string; name: string };
 
 export default function ExpensesPage() {
+  const PAGE_SIZE = 10;
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
+
+
   const [rows, setRows] = useState<ExpenseRow[]>([]);
   const [categories, setCategories] = useState<ExpenseCategory[]>([]);
   const [from, setFrom] = useMonthStartState();
@@ -18,9 +25,18 @@ export default function ExpensesPage() {
   const [form, setForm] = useState({ category_id: "", amount: "", expense_date: "", note: "" });
   const [error, setError] = useState("");
 
-  async function load() {
-    const qs = new URLSearchParams({ from, to });
-    setRows(await api<ExpenseRow[]>(`/expenses?${qs}`));
+  async function load(p = page) {
+    const qs = new URLSearchParams({
+      from,
+      to,
+      page: String(p),
+      limit: String(PAGE_SIZE),
+    });
+    const data = await api<PaginatedResponse<ExpenseRow>>(`/expenses?${qs}`);
+    setRows(data.items);
+    setTotal(data.total);
+    setTotalPages(data.totalPages);
+    setPage(data.page);
   }
 
   useEffect(() => {
@@ -88,7 +104,16 @@ export default function ExpensesPage() {
           ))}
         </tbody>
       </TableWrap>
-
+      <Pagination
+        page={page}
+        totalPages={totalPages}
+        total={total}
+        limit={PAGE_SIZE}
+        onPage={(p) => {
+          setPage(p);
+          void load(p);
+        }}
+      />
       <Modal open={open} onClose={() => setOpen(false)} title="New expense">
         <Field label="Category">
           <Select value={form.category_id} onChange={(e) => setForm({ ...form, category_id: e.target.value })}>

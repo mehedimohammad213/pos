@@ -143,3 +143,76 @@ function ModalHeader({ title, onClose }: { title: string; onClose: () => void })
 export function Money({ amount }: { amount: number }) {
   return <span className="font-mono tabular-nums">{amount}</span>;
 }
+
+export function Pagination({
+  page,
+  totalPages,
+  total,
+  limit,
+  onPage,
+}: {
+  page: number;
+  totalPages: number;
+  total: number;
+  limit: number;
+  onPage: (p: number) => void;
+}) {
+  if (totalPages <= 1) return null;
+  const from = (page - 1) * limit + 1;
+  const to = Math.min(page * limit, total);
+
+  const pages: (number | "...")[] = [];
+  for (let p = 1; p <= totalPages; p++) {
+    if (p === 1 || p === totalPages || (p >= page - 1 && p <= page + 1)) {
+      pages.push(p);
+    } else if (pages[pages.length - 1] !== "...") {
+      pages.push("...");
+    }
+  }
+
+  return (
+    <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm text-slate-600">
+      <span>
+        Showing {from}–{to} of {total}
+      </span>
+      <div className="flex items-center gap-1">
+        <button
+          type="button"
+          disabled={page <= 1}
+          onClick={() => onPage(page - 1)}
+          className="rounded px-2 py-1 hover:bg-slate-100 disabled:opacity-40"
+        >
+          ‹
+        </button>
+        {pages.map((p, i) =>
+          p === "..." ? (
+            <span key={`ellipsis-${i}`} className="px-1">
+              …
+            </span>
+          ) : (
+            <button
+              key={p}
+              type="button"
+              onClick={() => onPage(p as number)}
+              className={`min-w-[2rem] rounded px-2 py-1 ${
+                p === page
+                  ? "bg-teal-600 font-semibold text-white"
+                  : "hover:bg-slate-100"
+              }`}
+            >
+              {p}
+            </button>
+          )
+        )}
+        <button
+          type="button"
+          disabled={page >= totalPages}
+          onClick={() => onPage(page + 1)}
+          className="rounded px-2 py-1 hover:bg-slate-100 disabled:opacity-40"
+        >
+          ›
+        </button>
+      </div>
+    </div>
+  );
+}

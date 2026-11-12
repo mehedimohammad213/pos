@@ -6,9 +6,16 @@ import * as purchase from '../services/purchaseService';
 
 const router = Router();
 
-router.get('/suppliers', authRequired, async (_req, res, next) => {
+router.get('/suppliers', authRequired, async (req, res, next) => {
   try {
-    res.json(await purchase.listSuppliers());
+    const page = req.query.page !== undefined ? Number(req.query.page) : undefined;
+    const limit = req.query.limit !== undefined ? Number(req.query.limit) : undefined;
+    const paginate = req.query.paginate === '1' || req.query.paginate === 'true';
+    res.json(await purchase.listSuppliers({
+      q: req.query.q as string | undefined,
+      page: page !== undefined || paginate ? (page || 1) : undefined,
+      limit: limit !== undefined || paginate ? (limit || 20) : undefined,
+    }));
   } catch (e) {
     next(e);
   }
@@ -49,7 +56,13 @@ router.post('/suppliers/pay', authRequired, requireRoles('admin', 'manager'), as
 
 router.get('/demands', authRequired, async (req, res, next) => {
   try {
-    res.json(await purchase.listDemands(req.query.status as string | undefined));
+    const page = req.query.page !== undefined ? Number(req.query.page) : undefined;
+    const limit = req.query.limit !== undefined ? Number(req.query.limit) : undefined;
+    const paginate = req.query.paginate === '1' || req.query.paginate === 'true';
+    res.json(await purchase.listDemands(req.query.status as string | undefined, {
+      page: page !== undefined || paginate ? (page || 1) : undefined,
+      limit: limit !== undefined || paginate ? (limit || 20) : undefined,
+    }));
   } catch (e) {
     next(e);
   }
@@ -96,9 +109,16 @@ router.patch('/demands/:id/status', authRequired, requireRoles('admin', 'manager
   }
 });
 
-router.get('/', authRequired, async (_req, res, next) => {
+router.get('/', authRequired, async (req, res, next) => {
   try {
-    res.json(await purchase.listPurchases());
+    const page = req.query.page !== undefined ? Number(req.query.page) : undefined;
+    const limit = req.query.limit !== undefined ? Number(req.query.limit) : undefined;
+    const paginate = req.query.paginate === '1' || req.query.paginate === 'true';
+    res.json(await purchase.listPurchases({
+      supplier_id: req.query.supplier_id as string | undefined,
+      page: page !== undefined || paginate ? (page || 1) : undefined,
+      limit: limit !== undefined || paginate ? (limit || 20) : undefined,
+    }));
   } catch (e) {
     next(e);
   }

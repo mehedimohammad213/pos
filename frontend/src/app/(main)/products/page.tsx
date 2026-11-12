@@ -4,11 +4,11 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { BarcodeInputs } from "@/components/BarcodeInputs";
 import { ProductLabelPrint, ProductLabelsPrint } from "@/components/ProductLabel";
-import { Alert, Btn, Field, Input, Modal, PageHeader, Select, TableWrap, Td, Th } from "@/components/ui";
+import { Alert, Btn, Field, Input, Modal, PageHeader, Pagination, Select, TableWrap, Td, Th } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { formatBDT } from "@/lib/format";
-import type { Brand, Category, Product } from "@/lib/types";
+import type { Brand, Category, PaginatedResponse, Product } from "@/lib/types";
 
 const emptyForm = {
   name: "",
@@ -24,12 +24,17 @@ const emptyForm = {
   initial_qty: "0",
 };
 
+const PAGE_SIZE = 10;
+
 export default function ProductsPage() {
   const { canSeeCost } = useAuth();
   const [rows, setRows] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [brands, setBrands] = useState<Brand[]>([]);
   const [q, setQ] = useState("");
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
   const [form, setForm] = useState(emptyForm);
   const [editId, setEditId] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
@@ -41,21 +46,28 @@ export default function ProductsPage() {
   const [error, setError] = useState("");
   const [msg, setMsg] = useState("");
 
-  async function load() {
+  async function load(p = page) {
     const qs = new URLSearchParams();
     if (q) qs.set("q", q);
     qs.set("include_inactive", "1");
-    setRows(await api<Product[]>(`/catalog/products?${qs}`));
+    qs.set("page", String(p));
+    qs.set("limit", String(PAGE_SIZE));
+    const data = await api<PaginatedResponse<Product>>(`/catalog/products?${qs}`);
+    setRows(data.items);
+    setTotal(data.total);
+    setTotalPages(data.totalPages);
+    setPage(data.page);
   }
 
   useEffect(() => {
-    void load();
+    void load(1);
     void api<Category[]>("/catalog/categories").then(setCategories);
     void api<Brand[]>("/catalog/brands").then(setBrands);
   }, []);
 
   useEffect(() => {
-    const t = setTimeout(() => void load(), 300);
+    setPage(1);
+    const t = setTimeout(() => void load(1), 300);
     return () => clearTimeout(t);
   }, [q]);
 
@@ -283,6 +295,13 @@ export default function ProductsPage() {
           ))}
         </tbody>
       </TableWrap>
+      <Pagination
+        page={page}
+        totalPages={totalPages}
+        total={total}
+        limit={PAGE_SIZE}
+        onPage={(p) => { setPage(p); void load(p); }}
+      />
       </div>
 
       <Modal open={open} onClose={() => setOpen(false)} title={editId ? "Edit product" : "New product"} wide>

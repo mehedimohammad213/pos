@@ -3,9 +3,39 @@ import { nextDocumentNo } from '../utils/documents';
 import { AppError, assertFound } from '../utils/errors';
 import { writeAudit } from './auditService';
 import { addSerials } from './catalogService';
+import { formatPaginatedResponse } from '../utils/pagination';
 
-export async function listSuppliers() {
-  const r = await query(`SELECT * FROM suppliers WHERE deleted_at IS NULL ORDER BY name`);
+export async function listSuppliers(params?: { page?: number; limit?: number; q?: string }) {
+  const where: string[] = ['deleted_at IS NULL'];
+  const values: unknown[] = [];
+  let i = 1;
+  if (params?.q) {
+    where.push(`(name ILIKE $${i} OR phone ILIKE $${i})`);
+    values.push(`%${params.q}%`);
+    i++;
+  }
+
+  const isPaginated = params?.page !== undefined || params?.limit !== undefined;
+  if (isPaginated) {
+    const page = Math.max(1, Number(params?.page) || 1);
+    const limit = Math.min(100, Math.max(1, Number(params?.limit) || 20));
+    const offset = (page - 1) * limit;
+
+    const countRes = await query(
+      `SELECT COUNT(*)::int AS total FROM suppliers WHERE ${where.join(' AND ')}`,
+      values
+    );
+    const total = Number(countRes.rows[0]?.total || 0);
+
+    const dataValues = [...values, limit, offset];
+    const r = await query(
+      `SELECT * FROM suppliers WHERE ${where.join(' AND ')} ORDER BY name LIMIT $${i++} OFFSET $${i++}`,
+      dataValues
+    );
+    return formatPaginatedResponse(r.rows, total, page, limit);
+  }
+
+  const r = await query(`SELECT * FROM suppliers WHERE ${where.join(' AND ')} ORDER BY name`, values);
   return r.rows;
 }
 
@@ -33,13 +63,41 @@ export async function updateSupplier(id: string, input: Record<string, unknown>)
   return assertFound(r.rows[0]);
 }
 
-export async function listDemands(status?: string) {
+export async function listDemands(status?: string, params?: { page?: number; limit?: number }) {
   const values: unknown[] = [];
   let where = '1=1';
+  let i = 1;
   if (status) {
-    where = 'd.status = $1';
+    where = `d.status = $${i++}`;
     values.push(status);
   }
+
+  const isPaginated = params?.page !== undefined || params?.limit !== undefined;
+  if (isPaginated) {
+    const page = Math.max(1, Number(params?.page) || 1);
+    const limit = Math.min(100, Math.max(1, Number(params?.limit) || 20));
+    const offset = (page - 1) * limit;
+
+    const countRes = await query(
+      `SELECT COUNT(*)::int AS total FROM purchase_demands d WHERE ${where}`,
+      values
+    );
+    const total = Number(countRes.rows[0]?.total || 0);
+
+    const dataValues = [...values, limit, offset];
+    const r = await query(
+      `SELECT d.*, s.name AS supplier_name, u.name AS created_by_name
+       FROM purchase_demands d
+       LEFT JOIN suppliers s ON s.id = d.preferred_supplier_id
+       LEFT JOIN users u ON u.id = d.created_by
+       WHERE ${where}
+       ORDER BY d.created_at DESC
+       LIMIT $${i++} OFFSET $${i++}`,
+      dataValues
+    );
+    return formatPaginatedResponse(r.rows, total, page, limit);
+  }
+
   const r = await query(
     `SELECT d.*, s.name AS supplier_name, u.name AS created_by_name
      FROM purchase_demands d
@@ -110,11 +168,49 @@ export async function updateDemandStatus(id: string, status: string, userId: str
   return demand;
 }
 
-export async function listPurchases() {
+export async function listPurchases(params?: {
+  page?: number;
+  limit?: number;
+  supplier_id?: string;
+}) {
+  const where: string[] = ['1=1'];
+  const values: unknown[] = [];
+  let i = 1;
+  if (params?.supplier_id) {
+    where.push(`p.supplier_id = $${i++}`);
+    values.push(params.supplier_id);
+  }
+
+  const isPaginated = params?.page !== undefined || params?.limit !== undefined;
+  if (isPaginated) {
+    const page = Math.max(1, Number(params?.page) || 1);
+    const limit = Math.min(100, Math.max(1, Number(params?.limit) || 20));
+    const offset = (page - 1) * limit;
+
+    const countRes = await query(
+      `SELECT COUNT(*)::int AS total FROM purchases p WHERE ${where.join(' AND ')}`,
+      values
+    );
+    const total = Number(countRes.rows[0]?.total || 0);
+
+    const dataValues = [...values, limit, offset];
+    const r = await query(
+      `SELECT p.*, s.name AS supplier_name FROM purchases p
+       LEFT JOIN suppliers s ON s.id = p.supplier_id
+       WHERE ${where.join(' AND ')}
+       ORDER BY p.purchase_date DESC, p.created_at DESC
+       LIMIT $${i++} OFFSET $${i++}`,
+      dataValues
+    );
+    return formatPaginatedResponse(r.rows, total, page, limit);
+  }
+
   const r = await query(
     `SELECT p.*, s.name AS supplier_name FROM purchases p
      LEFT JOIN suppliers s ON s.id = p.supplier_id
-     ORDER BY p.purchase_date DESC, p.created_at DESC`
+     WHERE ${where.join(' AND ')}
+     ORDER BY p.purchase_date DESC, p.created_at DESC`,
+    values
   );
   return r.rows;
 }
