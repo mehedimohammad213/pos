@@ -28,49 +28,43 @@ type OverdueDue = {
 export default function InstallmentsPage() {
   const PAGE_SIZE = 10;
   const [plans, setPlans] = useState<EmiPlan[]>([]);
-  const [overdue, setOverdue] = useState<OverdueDue[]>([]);
+  const [allOverdue, setAllOverdue] = useState<OverdueDue[]>([]);
   const [pagePlans, setPagePlans] = useState(1);
   const [totalPagesPlans, setTotalPagesPlans] = useState(1);
   const [totalPlans, setTotalPlans] = useState(0);
   const [pageOverdue, setPageOverdue] = useState(1);
-  const [totalPagesOverdue, setTotalPagesOverdue] = useState(1);
-  const [totalOverdue, setTotalOverdue] = useState(0);
   const [payTarget, setPayTarget] = useState<OverdueDue | null>(null);
   const [payForm, setPayForm] = useState({ amount: "", method: "cash", notes: "" });
   const [error, setError] = useState("");
   const [msg, setMsg] = useState("");
 
+  const totalOverdue = allOverdue.length;
+  const totalPagesOverdue = Math.max(1, Math.ceil(totalOverdue / PAGE_SIZE));
+  const overdue = allOverdue.slice((pageOverdue - 1) * PAGE_SIZE, pageOverdue * PAGE_SIZE);
 
-// Load installment plans with pagination
+  // Load installment plans with pagination
   async function loadPlans(p = pagePlans) {
     const qs = new URLSearchParams({
       page: String(p),
       limit: String(PAGE_SIZE),
     });
     const data = await api<PaginatedResponse<EmiPlan>>(`/installments?${qs}`);
-    setPlans(data.items);
-    setTotalPlans(data.total);
-    setTotalPagesPlans(data.totalPages);
-    setPagePlans(data.page);
+    setPlans(data?.items || []);
+    setTotalPlans(data?.total || 0);
+    setTotalPagesPlans(data?.totalPages || 1);
+    setPagePlans(data?.page || 1);
   }
 
-  // Load overdue installments with pagination
-  async function loadOverdue(p = pageOverdue) {
-    const qs = new URLSearchParams({
-      page: String(p),
-      limit: String(PAGE_SIZE),
-    });
-    const data = await api<PaginatedResponse<OverdueDue>>(`/installments/overdue?${qs}`);
-    setOverdue(data.items);
-    setTotalOverdue(data.total);
-    setTotalPagesOverdue(data.totalPages);
-    setPageOverdue(data.page);
+  // Load overdue installments
+  async function loadOverdue() {
+    const data = await api<OverdueDue[]>("/installments/overdue");
+    setAllOverdue(Array.isArray(data) ? data : []);
   }
 
   // Initial load for both tables
   useEffect(() => {
     void loadPlans(1);
-    void loadOverdue(1);
+    void loadOverdue();
   }, []);
 
 
@@ -89,7 +83,7 @@ export default function InstallmentsPage() {
       });
       setPayTarget(null);
       setMsg("Payment recorded");
-      await Promise.all([loadPlans(pagePlans), loadOverdue(pageOverdue)]);
+      await Promise.all([loadPlans(pagePlans), loadOverdue()]);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Payment failed");
     }
@@ -138,7 +132,7 @@ export default function InstallmentsPage() {
         totalPages={totalPagesOverdue}
         total={totalOverdue}
         limit={PAGE_SIZE}
-        onPage={(p) => { setPageOverdue(p); void loadOverdue(p); }}
+        onPage={(p) => setPageOverdue(p)}
       />
 
       <h2 className="mb-2 font-medium text-slate-700">All plans</h2>
