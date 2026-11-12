@@ -101,7 +101,7 @@ function LoginPanel({
             onChange={(e) => setEmail(e.target.value)}
             required
             autoComplete="username"
-            className="w-full border-slate-600 bg-slate-800 text-white"
+            className="w-full border-slate-300 bg-white text-black"
           />
         </Field>
         <Field label="Password">
@@ -111,7 +111,7 @@ function LoginPanel({
             onChange={(e) => setPassword(e.target.value)}
             required
             autoComplete="current-password"
-            className="w-full border-slate-600 bg-slate-800 text-white"
+            className="w-full border-slate-300 bg-white text-black"
           />
         </Field>
         <Btn type="submit" disabled={busy} className="w-full py-3 text-base">

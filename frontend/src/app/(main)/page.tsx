@@ -5,13 +5,18 @@ import Link from "next/link";
 import { api } from "@/lib/api";
 import { formatBDT } from "@/lib/format";
 import type { DashboardSummary } from "@/lib/types";
-import { Card, PageHeader } from "@/components/ui";
+import { Alert, Card, PageHeader } from "@/components/ui";
 
 export default function DashboardPage() {
   const [data, setData] = useState<DashboardSummary | null>(null);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    void api<DashboardSummary>("/reports/dashboard").then(setData);
+    void api<DashboardSummary>("/reports/dashboard")
+      .then(setData)
+      .catch((err: unknown) => {
+        setError(err instanceof Error ? err.message : "Unable to load dashboard data");
+      });
   }, []);
 
   const s = data?.sales;
@@ -19,6 +24,7 @@ export default function DashboardPage() {
   return (
     <div>
       <PageHeader title="Dashboard" />
+      {error ? <Alert tone="error">{error}</Alert> : null}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Today's sales" value={formatBDT(s?.total_sales)} sub={`${s?.invoice_count ?? 0} invoices`} />
         <StatCard label="Retail" value={formatBDT(s?.retail_sales)} />

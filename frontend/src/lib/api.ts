@@ -1,5 +1,16 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:9006";
 
+function getApiBaseUrl(): string {
+  if (typeof window === "undefined") return API_URL;
+
+  const url = new URL(API_URL, window.location.origin);
+  const localHosts = ["localhost", "127.0.0.1", "::1"];
+  if (localHosts.includes(url.hostname) && !localHosts.includes(window.location.hostname)) {
+    url.hostname = window.location.hostname;
+  }
+  return url.origin;
+}
+
 export const ACCESS_TOKEN_KEY = "pos_access_token";
 export const REFRESH_TOKEN_KEY = "pos_refresh_token";
 
@@ -22,7 +33,7 @@ async function doRefresh(): Promise<boolean> {
   const refresh = localStorage.getItem(REFRESH_TOKEN_KEY);
   if (!refresh) return false;
   try {
-    const res = await fetch(`${API_URL}/api/auth/refresh`, {
+    const res = await fetch(`${getApiBaseUrl()}/api/auth/refresh`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ refreshToken: refresh }),
@@ -59,7 +70,7 @@ export async function api<T>(
     headers.set("Content-Type", "application/json");
   }
 
-  const url = `${API_URL}/api${path}`;
+  const url = `${getApiBaseUrl()}/api${path}`;
   let res = await fetch(url, { ...options, headers });
 
   if (res.status === 401 && !options.skipAuth) {
@@ -103,7 +114,7 @@ export async function apiText(path: string, options?: RequestInit): Promise<stri
   const headers = new Headers(options?.headers);
   const token = getAccessToken();
   if (token) headers.set("Authorization", `Bearer ${token}`);
-  const url = `${API_URL}/api${path}`;
+  const url = `${getApiBaseUrl()}/api${path}`;
   const res = await fetch(url, { ...options, headers });
   if (!res.ok) throw new ApiError(res.statusText, res.status);
   return res.text();

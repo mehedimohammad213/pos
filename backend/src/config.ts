@@ -15,7 +15,10 @@ export const config = {
   jwtRefreshSecret: required('JWT_REFRESH_SECRET', 'dev-refresh-secret-change-me-32chars'),
   jwtAccessExpires: process.env.JWT_ACCESS_EXPIRES || '15m',
   jwtRefreshExpires: process.env.JWT_REFRESH_EXPIRES || '7d',
-  corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:9005',
+  corsOrigin: (process.env.CORS_ORIGIN || 'http://localhost:9005')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean),
   nodeEnv: process.env.NODE_ENV || 'development',
 };
 
