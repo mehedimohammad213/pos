@@ -37,6 +37,24 @@ export type Product = {
   unit?: string;
 };
 
+export interface BulkImportRowError {
+  row: number;
+  name?: string;
+  sku?: string;
+  barcode?: string;
+  error: string;
+}
+
+export interface BulkImportResult {
+  total: number;
+  successCount: number;
+  createdCount: number;
+  updatedCount: number;
+  failedCount: number;
+  errors: BulkImportRowError[];
+  products: Product[];
+}
+
 export type Category = { id: string; name: string; description?: string };
 export type Brand = { id: string; name: string };
 

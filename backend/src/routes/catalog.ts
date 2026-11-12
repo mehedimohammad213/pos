@@ -88,10 +88,23 @@ router.patch('/products/:id', authRequired, requireRoles('admin', 'manager', 'st
   }
 });
 
-router.post('/products/import', authRequired, requireRoles('admin', 'manager'), async (req, res, next) => {
+router.post('/products/import', authRequired, requireRoles('admin', 'manager', 'stock'), async (req, res, next) => {
   try {
-    const body = z.object({ rows: z.array(z.record(z.string(), z.string())) }).parse(req.body);
-    res.json(await catalog.importProductsCsv(body.rows, req.user!.id));
+    const body = z
+      .object({
+        rows: z.array(z.record(z.string(), z.unknown())),
+        options: z
+          .object({
+            updateExisting: z.boolean().optional(),
+            autoCreateCategories: z.boolean().optional(),
+            autoCreateBrands: z.boolean().optional(),
+            autoGenerateSku: z.boolean().optional(),
+            autoGenerateBarcode: z.boolean().optional(),
+          })
+          .optional(),
+      })
+      .parse(req.body);
+    res.json(await catalog.importProductsBulk(body.rows, body.options, req.user!.id));
   } catch (e) {
     next(e);
   }

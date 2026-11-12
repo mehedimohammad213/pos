@@ -201,6 +201,11 @@ export default function NewProductPage() {
             >
               🎯 Barcode focus
             </Btn>
+            <Link href="/products/import">
+              <Btn type="button" variant="secondary" title="Import multiple products at once via CSV">
+                Bulk upload
+              </Btn>
+            </Link>
             <Btn
               type="button"
               variant="secondary"

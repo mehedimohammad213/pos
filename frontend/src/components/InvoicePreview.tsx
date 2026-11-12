@@ -10,7 +10,8 @@ async function buildInvoiceBlob(sale: Sale, shop?: ShopSettings | null) {
     import("@react-pdf/renderer"),
     import("@/components/InvoiceDocument"),
   ]);
-  return pdf(createElement(InvoiceDocument, { sale, shop })).toBlob();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return pdf(createElement(InvoiceDocument, { sale, shop }) as any).toBlob();
 }
 
 export function InvoicePreview({

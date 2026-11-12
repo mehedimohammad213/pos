@@ -7,6 +7,7 @@ import { useAuth } from "@/lib/auth";
 import type { Product, Sale, ShopSettings } from "@/lib/types";
 import { Alert, Btn, Input, PageHeader, TableWrap, Td, Th } from "@/components/ui";
 import { InvoicePreview } from "@/components/InvoicePreview";
+import { formatDate } from "@/lib/format";
 
 function SaleDetailContent() {
   const { id } = useParams<{ id: string }>();

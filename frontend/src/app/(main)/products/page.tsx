@@ -190,6 +190,11 @@ export default function ProductsPage() {
         >
           {selected.size ? `Print barcodes (${selected.size})` : "Print barcodes"}
         </Btn>
+        <Link href="/products/import">
+          <Btn variant="secondary" title="Bulk upload products from CSV">
+            Bulk upload
+          </Btn>
+        </Link>
         <Link href="/products/new">
           <Btn>Add product</Btn>
         </Link>
