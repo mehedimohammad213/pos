@@ -9,13 +9,13 @@ function required(name: string, fallback?: string): string {
 }
 
 export const config = {
-  port: Number(process.env.PORT || 4000),
+  port: Number(process.env.PORT || 9006),
   databaseUrl: required('DATABASE_URL', 'postgresql://postgres:postgres@localhost:5432/hardware_pos'),
   jwtAccessSecret: required('JWT_ACCESS_SECRET', 'dev-access-secret-change-me-32chars'),
   jwtRefreshSecret: required('JWT_REFRESH_SECRET', 'dev-refresh-secret-change-me-32chars'),
   jwtAccessExpires: process.env.JWT_ACCESS_EXPIRES || '15m',
   jwtRefreshExpires: process.env.JWT_REFRESH_EXPIRES || '7d',
-  corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+  corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:9005',
   nodeEnv: process.env.NODE_ENV || 'development',
 };
 

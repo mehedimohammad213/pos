@@ -1,4 +1,4 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:9006";
 
 export const ACCESS_TOKEN_KEY = "pos_access_token";
 export const REFRESH_TOKEN_KEY = "pos_refresh_token";

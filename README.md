@@ -27,18 +27,18 @@ npm run seed
 npm run dev
 ```
 
-API: http://localhost:4000
+API: http://localhost:9006
 
 ### Frontend
 
 ```bash
 cd frontend
 npm install
-# create .env.local with NEXT_PUBLIC_API_URL=http://localhost:4000
+# create .env.local with NEXT_PUBLIC_API_URL=http://localhost:9006
 npm run dev
 ```
 
-UI: http://localhost:3000
+UI: http://localhost:9005
 
 ### Demo logins
 
