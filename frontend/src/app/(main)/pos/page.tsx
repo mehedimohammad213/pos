@@ -7,7 +7,8 @@ import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { formatBDT } from "@/lib/format";
 import { useTodayState } from "@/lib/use-client-date";
-import type { CartItem, Customer, Product, Sale, Serial } from "@/lib/types";
+import type { CartItem, Customer, Product, Sale, Serial, ShopSettings } from "@/lib/types";
+import { InvoicePreview } from "@/components/InvoicePreview";
 import { PAYMENT_METHODS } from "@/lib/types";
 
 type PayRow = { method: string; amount: string; reference: string };
@@ -35,6 +36,8 @@ export default function PosPage() {
   const [availableSerials, setAvailableSerials] = useState<Serial[]>([]);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [shop, setShop] = useState<ShopSettings | null>(null);
+  const [receipt, setReceipt] = useState<Sale | null>(null);
   const barcodeRef = useRef<HTMLInputElement>(null);
 
   const subtotal = cart.reduce((s, l) => s + l.unit_price * l.quantity - l.discount_amount, 0);
@@ -56,6 +59,7 @@ export default function PosPage() {
 
   useEffect(() => {
     void api<Sale[]>("/sales/held").then(setHeld).catch(() => setHeld([]));
+    void api<ShopSettings>("/shop").then(setShop).catch(() => setShop(null));
   }, []);
 
   async function addProduct(p: Product) {
@@ -138,6 +142,7 @@ export default function PosPage() {
       }
       const sale = await api<Sale>("/sales", { method: "POST", body: JSON.stringify(body) });
       setSuccess(hold ? `Held as ${sale.invoice_no || sale.id}` : `Sale ${sale.invoice_no || sale.id} complete`);
+      if (!hold) setReceipt(sale);
       setCart([]);
       setDiscount("");
       setPayments([{ method: "cash", amount: "", reference: "" }]);

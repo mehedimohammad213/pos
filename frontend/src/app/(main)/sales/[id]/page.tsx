@@ -4,16 +4,16 @@ import { Suspense, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import type { Product, Sale } from "@/lib/types";
-import { Alert, Btn, Field, Input, PageHeader, TableWrap, Td, Th } from "@/components/ui";
-import { formatBDT, formatDate } from "@/lib/format";
+import type { Product, Sale, ShopSettings } from "@/lib/types";
+import { Alert, Btn, Input, PageHeader, TableWrap, Td, Th } from "@/components/ui";
+import { InvoicePreview } from "@/components/InvoicePreview";
 
 function SaleDetailContent() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const { hasPermission } = useAuth();
   const [sale, setSale] = useState<Sale | null>(null);
-  const [shop, setShop] = useState<{ name?: string; address?: string; phone?: string } | null>(null);
+  const [shop, setShop] = useState<ShopSettings | null>(null);
   const [returnQty, setReturnQty] = useState<Record<string, string>>({});
   const [products, setProducts] = useState<Product[]>([]);
   const [exchangeNew, setExchangeNew] = useState({ product_id: "", quantity: "1" });
@@ -26,7 +26,7 @@ function SaleDetailContent() {
 
   useEffect(() => {
     void load();
-    void api<typeof shop>("/shop").then(setShop);
+    void api<ShopSettings>("/shop").then(setShop);
     void api<Product[]>("/catalog/products").then(setProducts);
   }, [id]);
 
@@ -114,9 +114,6 @@ function SaleDetailContent() {
   return (
     <div>
       <PageHeader title={`Invoice ${sale.invoice_no || id.slice(0, 8)}`}>
-        <Btn variant="secondary" className="no-print" onClick={() => window.print()}>
-          Print A4
-        </Btn>
         {hasPermission("void") && sale.status === "completed" ? (
           <Btn variant="danger" className="no-print" onClick={() => void voidSale()}>
             Void
@@ -126,45 +123,7 @@ function SaleDetailContent() {
       {msg ? <Alert tone="success">{msg}</Alert> : null}
       {error ? <Alert tone="error">{error}</Alert> : null}
 
-      <div className="invoice-a4 rounded-xl border border-slate-200 bg-white p-6 no-print:shadow-sm">
-        <div className="print-only" />
-        <header className="border-b border-slate-200 pb-4">
-          <h2 className="text-xl font-semibold">{shop?.name || "Hardware Shop"}</h2>
-          <p className="text-sm text-slate-600">{shop?.address}</p>
-          <p className="text-sm text-slate-600">{shop?.phone}</p>
-        </header>
-        <SaleMetaInfo sale={sale} />
-        <TableWrap className="mt-4 border-0 shadow-none">
-          <thead>
-            <tr>
-              <Th>Item</Th>
-              <Th>Qty</Th>
-              <Th>Unit</Th>
-              <Th>Line</Th>
-            </tr>
-          </thead>
-          <tbody>
-            {(sale.items || []).map((line, i) => (
-              <tr key={line.id || i}>
-                <Td>{line.product_name}</Td>
-                <Td className="font-mono">{line.quantity}</Td>
-                <Td className="font-mono">{formatBDT(line.unit_price)}</Td>
-                <Td className="font-mono">{formatBDT(line.line_total ?? line.unit_price * line.quantity)}</Td>
-              </tr>
-            ))}
-          </tbody>
-        </TableWrap>
-        <p className="mt-4 text-right font-mono text-lg font-semibold">Total: {formatBDT(sale.total)}</p>
-        {sale.payments?.length ? (
-          <ul className="mt-2 text-sm text-slate-600">
-            {sale.payments.map((p, i) => (
-              <li key={i}>
-                {p.method}: {formatBDT(p.amount)}
-              </li>
-            ))}
-          </ul>
-        ) : null}
-      </div>
+      <InvoicePreview sale={sale} shop={shop} />
 
       {sale.status === "completed" ? (
         <div className="no-print mt-8">

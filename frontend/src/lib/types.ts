@@ -98,6 +98,8 @@ export type Sale = {
   hold_name?: string;
   notes?: string;
   is_backdated?: boolean;
+  created_at?: string;
+  tax_amount?: number | string;
 };
 
 export type Supplier = {
@@ -177,6 +179,7 @@ export type ShopSettings = {
   logo_url?: string;
   vat_tin?: string;
   default_tax_percent?: number | string;
+  currency?: string;
 };
 
 export type Shift = {
