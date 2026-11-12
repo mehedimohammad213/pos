@@ -2,16 +2,26 @@
 
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import type { Product, Purchase, Supplier } from "@/lib/types";
-import { Alert, Btn, Field, Input, Modal, PageHeader, Select, TableWrap, Td, Th } from "@/components/ui";
+import type { Product, Purchase, Supplier, PaginatedResponse } from "@/lib/types";
+import { Alert, Btn, Field, Input, Modal, PageHeader, Select, TableWrap, Td, Th, Pagination } from "@/components/ui";
 import { formatBDT, formatDate, todayISO } from "@/lib/format";
 
 type PurchaseLine = { product_id: string; quantity: string; unit_cost: string };
 
 export default function PurchasesPage() {
+  const PAGE_SIZE = 10;
   const [tab, setTab] = useState<"purchases" | "suppliers">("purchases");
   const [purchases, setPurchases] = useState<Purchase[]>([]);
+  const [pagePurchases, setPagePurchases] = useState(1);
+  const [totalPagesPurchases, setTotalPagesPurchases] = useState(1);
+  const [totalPurchases, setTotalPurchases] = useState(0);
+
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [pageSuppliers, setPageSuppliers] = useState(1);
+  const [totalPagesSuppliers, setTotalPagesSuppliers] = useState(1);
+  const [totalSuppliers, setTotalSuppliers] = useState(0);
+  const [allSuppliers, setAllSuppliers] = useState<Supplier[]>([]);
+
   const [products, setProducts] = useState<Product[]>([]);
   const [supOpen, setSupOpen] = useState(false);
   const [payOpen, setPayOpen] = useState<Supplier | null>(null);
@@ -28,13 +38,39 @@ export default function PurchasesPage() {
   });
   const [error, setError] = useState("");
 
-  async function load() {
-    setPurchases(await api<Purchase[]>("/purchases"));
-    setSuppliers(await api<Supplier[]>("/purchases/suppliers"));
+  async function loadPurchases(p = pagePurchases) {
+    const qs = new URLSearchParams({
+      page: String(p),
+      limit: String(PAGE_SIZE),
+    });
+    const data = await api<PaginatedResponse<Purchase>>(`/purchases?${qs}`);
+    setPurchases(data.items);
+    setTotalPurchases(data.total);
+    setTotalPagesPurchases(data.totalPages);
+    setPagePurchases(data.page);
+  }
+
+  async function loadSuppliers(p = pageSuppliers) {
+    const qs = new URLSearchParams({
+      page: String(p),
+      limit: String(PAGE_SIZE),
+    });
+    const data = await api<PaginatedResponse<Supplier>>(`/purchases/suppliers?${qs}`);
+    setSuppliers(data.items);
+    setTotalSuppliers(data.total);
+    setTotalPagesSuppliers(data.totalPages);
+    setPageSuppliers(data.page);
+  }
+
+  async function loadAllSuppliers() {
+    const data = await api<Supplier[]>("/purchases/suppliers");
+    setAllSuppliers(Array.isArray(data) ? data : (data as PaginatedResponse<Supplier>).items || []);
   }
 
   useEffect(() => {
-    void load();
+    void loadPurchases(1);
+    void loadSuppliers(1);
+    void loadAllSuppliers();
     void api<Product[]>("/catalog/products").then(setProducts);
     setPurForm((f) => (f.purchase_date ? f : { ...f, purchase_date: todayISO() }));
   }, []);
@@ -43,7 +79,7 @@ export default function PurchasesPage() {
     try {
       await api("/purchases/suppliers", { method: "POST", body: JSON.stringify(supForm) });
       setSupOpen(false);
-      await load();
+      await Promise.all([loadSuppliers(1), loadAllSuppliers()]);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed");
     }
@@ -62,7 +98,7 @@ export default function PurchasesPage() {
         }),
       });
       setPayOpen(null);
-      await load();
+      await Promise.all([loadSuppliers(pageSuppliers), loadPurchases(pagePurchases)]);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed");
     }
@@ -93,7 +129,7 @@ export default function PurchasesPage() {
         }),
       });
       setPurOpen(false);
-      await load();
+      await Promise.all([loadPurchases(1), loadSuppliers(pageSuppliers)]);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed");
     }
@@ -118,51 +154,75 @@ export default function PurchasesPage() {
       </div>
 
       {tab === "purchases" ? (
-        <TableWrap>
-          <thead>
-            <tr>
-              <Th>Date</Th>
-              <Th>Supplier</Th>
-              <Th>Total</Th>
-              <Th>Status</Th>
-            </tr>
-          </thead>
-          <tbody>
-            {purchases.map((p) => (
-              <tr key={p.id}>
-                <Td>{formatDate(p.purchase_date)}</Td>
-                <Td>{p.supplier_name}</Td>
-                <Td className="font-mono">{formatBDT(p.total)}</Td>
-                <Td>{p.status}</Td>
+        <>
+          <TableWrap>
+            <thead>
+              <tr>
+                <Th>Date</Th>
+                <Th>Supplier</Th>
+                <Th>Total</Th>
+                <Th>Status</Th>
               </tr>
-            ))}
-          </tbody>
-        </TableWrap>
+            </thead>
+            <tbody>
+              {purchases.map((p) => (
+                <tr key={p.id}>
+                  <Td>{formatDate(p.purchase_date)}</Td>
+                  <Td>{p.supplier_name}</Td>
+                  <Td className="font-mono">{formatBDT(p.total)}</Td>
+                  <Td>{p.status}</Td>
+                </tr>
+              ))}
+            </tbody>
+          </TableWrap>
+          <Pagination
+            page={pagePurchases}
+            totalPages={totalPagesPurchases}
+            total={totalPurchases}
+            limit={PAGE_SIZE}
+            onPage={(p) => {
+              setPagePurchases(p);
+              void loadPurchases(p);
+            }}
+          />
+        </>
       ) : (
-        <TableWrap>
-          <thead>
-            <tr>
-              <Th>Name</Th>
-              <Th>Phone</Th>
-              <Th>Balance</Th>
-              <Th />
-            </tr>
-          </thead>
-          <tbody>
-            {suppliers.map((s) => (
-              <tr key={s.id}>
-                <Td>{s.name}</Td>
-                <Td>{s.phone}</Td>
-                <Td className="font-mono">{formatBDT(s.due_balance)}</Td>
-                <Td>
-                  <Btn variant="ghost" className="text-xs" onClick={() => setPayOpen(s)}>
-                    Pay
-                  </Btn>
-                </Td>
+        <>
+          <TableWrap>
+            <thead>
+              <tr>
+                <Th>Name</Th>
+                <Th>Phone</Th>
+                <Th>Balance</Th>
+                <Th />
               </tr>
-            ))}
-          </tbody>
-        </TableWrap>
+            </thead>
+            <tbody>
+              {suppliers.map((s) => (
+                <tr key={s.id}>
+                  <Td>{s.name}</Td>
+                  <Td>{s.phone}</Td>
+                  <Td className="font-mono">{formatBDT(s.due_balance)}</Td>
+                  <Td>
+                    <Btn variant="ghost" className="text-xs" onClick={() => setPayOpen(s)}>
+                      Pay
+                    </Btn>
+                  </Td>
+                </tr>
+              ))}
+            </tbody>
+          </TableWrap>
+          <Pagination
+            page={pageSuppliers}
+            totalPages={totalPagesSuppliers}
+            total={totalSuppliers}
+            limit={PAGE_SIZE}
+            onPage={(p) => {
+              setPageSuppliers(p);
+              void loadSuppliers(p);
+            }}
+          />
+        </>
       )}
 
       <Modal open={supOpen} onClose={() => setSupOpen(false)} title="New supplier">
@@ -197,7 +257,7 @@ export default function PurchasesPage() {
           <Field label="Supplier">
             <Select value={purForm.supplier_id} onChange={(e) => setPurForm({ ...purForm, supplier_id: e.target.value })}>
               <option value="">—</option>
-              {suppliers.map((s) => (
+              {(allSuppliers.length ? allSuppliers : suppliers).map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.name}
                 </option>

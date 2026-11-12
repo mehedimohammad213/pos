@@ -4,14 +4,20 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import type { LowStockItem } from "@/lib/types";
-import { Alert, Btn, PageHeader, TableWrap, Td, Th } from "@/components/ui";
+import { Alert, Btn, PageHeader, TableWrap, Td, Th, Pagination } from "@/components/ui";
 import { formatBDT } from "@/lib/format";
 
 export default function LowStockPage() {
   const router = useRouter();
+  const PAGE_SIZE = 10;
+  const [page, setPage] = useState(1);
   const [rows, setRows] = useState<LowStockItem[]>([]);
   const [selected, setSelected] = useState<Record<string, number>>({});
   const [error, setError] = useState("");
+
+  const total = rows.length;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const paginatedRows = rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   useEffect(() => {
     void api<LowStockItem[]>("/catalog/low-stock").then((data) => {
@@ -61,7 +67,7 @@ export default function LowStockPage() {
           </tr>
         </thead>
         <tbody>
-          {rows.map((p) => (
+          {paginatedRows.map((p) => (
             <tr key={p.id}>
               <Td>
                 <div className="font-medium">{p.name}</div>
@@ -88,6 +94,13 @@ export default function LowStockPage() {
           ) : null}
         </tbody>
       </TableWrap>
+      <Pagination
+        page={page}
+        totalPages={totalPages}
+        total={total}
+        limit={PAGE_SIZE}
+        onPage={(p) => setPage(p)}
+      />
     </div>
   );
 }

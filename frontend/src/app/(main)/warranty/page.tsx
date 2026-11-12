@@ -114,6 +114,16 @@ export default function WarrantyPage() {
           ))}
         </tbody>
       </TableWrap>
+      <Pagination
+        page={page}
+        totalPages={totalPages}
+        total={total}
+        limit={PAGE_SIZE}
+        onPage={(p) => {
+          setPage(p);
+          void load(p);
+        }}
+      />
 
       <Modal open={open} onClose={() => setOpen(false)} title="Warranty claim">
         <Field label="Serial ID (UUID)">
