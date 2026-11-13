@@ -198,6 +198,9 @@ export default function PosPage() {
       if (!hold) setReceipt(sale);
       setCart([]);
       setDiscount("");
+      setCustomer(null);
+      setCustomerQ("");
+      setCustomerNotFound(false);
       setPayments([{ method: "cash", amount: "", reference: "" }]);
       if (hold) void api<Sale[]>("/sales/held").then(setHeld);
     } catch (err) {
@@ -338,8 +341,8 @@ export default function PosPage() {
         </form>
       </Modal>
 
-      <Modal open={!!receipt} onClose={() => setReceipt(null)} title="Receipt" wide>
-        {receipt ? <InvoicePreview sale={receipt} shop={shop} /> : null}
+      <Modal open={!!receipt} onClose={() => setReceipt(null)} title="Invoice" wide>
+        {receipt ? <InvoicePreview sale={receipt} shop={shop} onClose={() => setReceipt(null)} /> : null}
       </Modal>
 
       <Modal open={scanOpen} onClose={() => setScanOpen(false)} title="Scan barcode" wide>
