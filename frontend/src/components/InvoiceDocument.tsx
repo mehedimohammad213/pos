@@ -292,32 +292,39 @@ const normalStyles = StyleSheet.create({
     marginBottom: 16,
   },
   shopName: {
-    fontSize: 18,
+    fontSize: 16,
     fontFamily: "Helvetica-Bold",
     color: "#0f172a",
     marginBottom: 3,
+    maxWidth: 280,
   },
   shopInfo: {
     fontSize: 8.5,
     color: "#64748b",
-    maxWidth: 260,
+    maxWidth: 280,
     marginBottom: 1,
   },
+  shopCol: {
+    flex: 1,
+    paddingRight: 20,
+  },
   invoiceBadge: {
+    width: 200,
     alignItems: "flex-end",
   },
   invoiceTitle: {
-    fontSize: 22,
+    fontSize: 18,
     fontFamily: "Helvetica-Bold",
     color: "#0d9488",
     letterSpacing: 1,
-    marginBottom: 3,
+    marginBottom: 4,
+    textAlign: "right",
   },
   invoiceMetaText: {
-    fontSize: 8.5,
+    fontSize: 8,
     color: "#475569",
     textAlign: "right",
-    marginBottom: 1,
+    marginBottom: 1.5,
   },
   metaGrid: {
     flexDirection: "row",
@@ -374,7 +381,7 @@ const normalStyles = StyleSheet.create({
   colDesc: { flex: 1, paddingRight: 8 },
   colRate: { width: 70, textAlign: "right" },
   colQty: { width: 45, textAlign: "center" },
-  colAmount: { width: 80, textAlign: "right" },
+  colAmount: { width: 90, textAlign: "right" },
   itemTitle: {
     fontFamily: "Helvetica-Bold",
     color: "#0f172a",
@@ -455,7 +462,7 @@ export function NormalInvoiceDocument({
     <Document title={`Invoice ${invoiceNo}`}>
       <Page size="A4" style={normalStyles.page}>
         <View style={normalStyles.headerRow}>
-          <View>
+          <View style={normalStyles.shopCol}>
             <Text style={normalStyles.shopName}>{shop?.name || "Shop Name"}</Text>
             {shop?.address ? <Text style={normalStyles.shopInfo}>{shop.address}</Text> : null}
             {shop?.phone ? <Text style={normalStyles.shopInfo}>Phone: {shop.phone}</Text> : null}
