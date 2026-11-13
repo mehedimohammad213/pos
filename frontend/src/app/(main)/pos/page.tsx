@@ -25,6 +25,12 @@ export default function PosPage() {
   const [notes, setNotes] = useState("");
   const [customerQ, setCustomerQ] = useState("");
   const [customer, setCustomer] = useState<Customer | null>(null);
+  const [customerNotFound, setCustomerNotFound] = useState(false);
+  const [customerSearching, setCustomerSearching] = useState(false);
+  const [addCustomerOpen, setAddCustomerOpen] = useState(false);
+  const [customerSaving, setCustomerSaving] = useState(false);
+  const [customerModalError, setCustomerModalError] = useState("");
+  const [newCustomer, setNewCustomer] = useState({ name: "", phone: "", address: "" });
   const [payments, setPayments] = useState<PayRow[]>([{ method: "cash", amount: "", reference: "" }]);
   const [installment, setInstallment] = useState({ down: "", months: "3" });
   const [useInstallment, setUseInstallment] = useState(false);
@@ -94,12 +100,59 @@ export default function PosPage() {
   }
 
   async function searchCustomer() {
-    if (!customerQ.trim()) return;
+    const q = customerQ.trim();
+    if (!q) return;
+    setError("");
+    setCustomerSearching(true);
+    setCustomerNotFound(false);
     try {
-      const c = await api<Customer>(`/customers/by-phone/${encodeURIComponent(customerQ.trim())}`);
+      const c = await api<Customer>(`/customers/by-phone/${encodeURIComponent(q)}`);
       setCustomer(c);
+      setCustomerNotFound(false);
     } catch {
-      setError("Customer not found");
+      setCustomer(null);
+      setCustomerNotFound(true);
+    } finally {
+      setCustomerSearching(false);
+    }
+  }
+
+  function openAddCustomer() {
+    setNewCustomer({ name: "", phone: customerQ.trim(), address: "" });
+    setCustomerModalError("");
+    setAddCustomerOpen(true);
+  }
+
+  async function saveCustomer(e: React.FormEvent) {
+    e.preventDefault();
+    setCustomerModalError("");
+    if (!newCustomer.name.trim()) {
+      setCustomerModalError("Customer name is required");
+      return;
+    }
+    if (!newCustomer.phone.trim()) {
+      setCustomerModalError("Customer phone is required");
+      return;
+    }
+    setCustomerSaving(true);
+    try {
+      const created = await api<Customer>("/customers", {
+        method: "POST",
+        body: JSON.stringify({
+          name: newCustomer.name.trim(),
+          phone: newCustomer.phone.trim(),
+          address: newCustomer.address.trim() || undefined,
+        }),
+      });
+      setCustomer(created);
+      setCustomerQ(created.phone);
+      setCustomerNotFound(false);
+      setAddCustomerOpen(false);
+      setSuccess(`Customer "${created.name}" added and selected`);
+    } catch (err) {
+      setCustomerModalError(err instanceof Error ? err.message : "Failed to add customer");
+    } finally {
+      setCustomerSaving(false);
     }
   }
 
@@ -214,8 +267,80 @@ export default function PosPage() {
 
       <div className="grid gap-4 lg:grid-cols-5">
         <PosProductGrid products={products} addProduct={addProduct} saleType={saleType} />
-        <PosCartPanel cart={cart} setCart={setCart} subtotal={subtotal} discount={discount} setDiscount={discountAmt} discountInput={discount} setDiscountInput={setDiscount} total={total} customerQ={customerQ} setCustomerQ={setCustomerQ} searchCustomer={searchCustomer} customer={customer} payments={payments} setPayments={setPayments} paidTotal={paidTotal} useInstallment={useInstallment} setUseInstallment={setUseInstallment} installment={installment} setInstallment={setInstallment} notes={notes} setNotes={setNotes} completeSale={completeSale} held={held} recall={recall} />
+        <PosCartPanel
+          cart={cart}
+          setCart={setCart}
+          subtotal={subtotal}
+          discount={discount}
+          setDiscount={discountAmt}
+          discountInput={discount}
+          setDiscountInput={setDiscount}
+          total={total}
+          customerQ={customerQ}
+          setCustomerQ={setCustomerQ}
+          searchCustomer={searchCustomer}
+          customer={customer}
+          setCustomer={setCustomer}
+          customerNotFound={customerNotFound}
+          setCustomerNotFound={setCustomerNotFound}
+          customerSearching={customerSearching}
+          onOpenAddCustomer={openAddCustomer}
+          payments={payments}
+          setPayments={setPayments}
+          paidTotal={paidTotal}
+          useInstallment={useInstallment}
+          setUseInstallment={setUseInstallment}
+          installment={installment}
+          setInstallment={setInstallment}
+          notes={notes}
+          setNotes={setNotes}
+          completeSale={completeSale}
+          held={held}
+          recall={recall}
+        />
       </div>
+
+      <Modal open={addCustomerOpen} onClose={() => setAddCustomerOpen(false)} title="New customer">
+        <form onSubmit={saveCustomer} className="space-y-3">
+          {customerModalError ? <Alert tone="error">{customerModalError}</Alert> : null}
+          <Field label="Phone">
+            <Input
+              required
+              placeholder="e.g. 01XXXXXXXXX"
+              value={newCustomer.phone}
+              onChange={(e) => setNewCustomer({ ...newCustomer, phone: e.target.value })}
+            />
+          </Field>
+          <Field label="Name">
+            <Input
+              required
+              autoFocus
+              placeholder="Full name"
+              value={newCustomer.name}
+              onChange={(e) => setNewCustomer({ ...newCustomer, name: e.target.value })}
+            />
+          </Field>
+          <Field label="Address (optional)">
+            <Input
+              placeholder="Address / Area"
+              value={newCustomer.address}
+              onChange={(e) => setNewCustomer({ ...newCustomer, address: e.target.value })}
+            />
+          </Field>
+          <div className="flex justify-end gap-2 pt-2">
+            <Btn variant="secondary" type="button" onClick={() => setAddCustomerOpen(false)}>
+              Cancel
+            </Btn>
+            <Btn type="submit" disabled={customerSaving}>
+              {customerSaving ? "Adding…" : "Add customer"}
+            </Btn>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal open={!!receipt} onClose={() => setReceipt(null)} title="Receipt" wide>
+        {receipt ? <InvoicePreview sale={receipt} shop={shop} /> : null}
+      </Modal>
 
       <Modal open={scanOpen} onClose={() => setScanOpen(false)} title="Scan barcode" wide>
         <BarcodeScanner
@@ -360,6 +485,11 @@ function PosCartPanel(props: {
   setCustomerQ: (v: string) => void;
   searchCustomer: () => void;
   customer: Customer | null;
+  setCustomer: (c: Customer | null) => void;
+  customerNotFound: boolean;
+  setCustomerNotFound: (v: boolean) => void;
+  customerSearching: boolean;
+  onOpenAddCustomer: () => void;
   payments: PayRow[];
   setPayments: (p: PayRow[]) => void;
   paidTotal: number;
@@ -411,13 +541,70 @@ function PosCartPanel(props: {
         </Field>
         <div className="flex items-end justify-end font-mono text-xl font-semibold">{formatBDT(props.total)}</div>
       </div>
-      <div className="flex flex-wrap gap-2">
-        <Input placeholder="Customer phone" value={props.customerQ} onChange={(e) => props.setCustomerQ(e.target.value)} className="max-w-xs" />
-        <Btn variant="secondary" onClick={props.searchCustomer}>
-          Find customer
-        </Btn>
-        {props.customer ? <span className="text-sm text-teal-700">{props.customer.name}</span> : null}
-      </div>
+      <Field label="Customer">
+        {props.customer ? (
+          <div className="flex items-center justify-between rounded-lg border border-teal-200 bg-teal-50 px-3 py-2 text-sm text-teal-900">
+            <div className="min-w-0">
+              <span className="font-medium text-teal-950">{props.customer.name}</span>
+              <span className="ml-2 font-mono text-xs text-teal-700">({props.customer.phone})</span>
+              {Number(props.customer.due_balance) > 0 ? (
+                <span className="ml-2 rounded bg-amber-100 px-1.5 py-0.5 text-xs text-amber-800">
+                  Due: {formatBDT(Number(props.customer.due_balance))}
+                </span>
+              ) : null}
+            </div>
+            <Btn
+              variant="ghost"
+              className="text-xs text-red-600 hover:text-red-700"
+              onClick={() => {
+                props.setCustomer(null);
+                props.setCustomerNotFound(false);
+              }}
+            >
+              Change
+            </Btn>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <div className="flex flex-wrap gap-2">
+              <Input
+                placeholder="Customer phone"
+                value={props.customerQ}
+                onChange={(e) => {
+                  props.setCustomerQ(e.target.value);
+                  if (props.customerNotFound) props.setCustomerNotFound(false);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    void props.searchCustomer();
+                  }
+                }}
+                className="max-w-xs"
+              />
+              <Btn variant="secondary" onClick={() => void props.searchCustomer()} disabled={props.customerSearching}>
+                {props.customerSearching ? "Searching…" : "Find customer"}
+              </Btn>
+              <Btn variant="secondary" onClick={props.onOpenAddCustomer}>
+                + Add customer
+              </Btn>
+            </div>
+
+            {props.customerNotFound ? (
+              <div className="flex items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                <span>Customer not found for &quot;{props.customerQ}&quot;</span>
+                <Btn
+                  variant="primary"
+                  className="px-2.5 py-1 text-xs"
+                  onClick={props.onOpenAddCustomer}
+                >
+                  Add customer
+                </Btn>
+              </div>
+            ) : null}
+          </div>
+        )}
+      </Field>
       <label className="flex items-center gap-2 text-sm">
         <input type="checkbox" checked={props.useInstallment} onChange={(e) => props.setUseInstallment(e.target.checked)} />
         Installment plan
