@@ -1,14 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import type { Product, Serial, PaginatedResponse } from "@/lib/types";
-import { Alert, Btn, Field, Input, Modal, PageHeader, Select, TableWrap, Td, Th, Pagination } from "@/components/ui";
+import { Alert, Btn, Field, Modal, PageHeader, TableWrap, Td, Th, Pagination } from "@/components/ui";
 
 export default function SerialsPage() {
   const [rows, setRows] = useState<Serial[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
-  const [productFilter, setProductFilter] = useState("");
   const PAGE_SIZE = 10;
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -16,7 +15,6 @@ export default function SerialsPage() {
 
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ product_id: "", serial_numbers: "" });
-
   const [error, setError] = useState("");
 
   async function load(p = page) {
@@ -67,23 +65,12 @@ export default function SerialsPage() {
       });
       setOpen(false);
       setForm({ product_id: "", serial_numbers: "" });
-      setProductFilter("");
       await load();
       await loadProductsList();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed");
     }
   }
-
-  const filteredProducts = products.filter((p) => {
-    if (!productFilter.trim()) return true;
-    const term = productFilter.toLowerCase().trim();
-    return (
-      p.name.toLowerCase().includes(term) ||
-      (p.sku && p.sku.toLowerCase().includes(term)) ||
-      (p.barcode && p.barcode.toLowerCase().includes(term))
-    );
-  });
 
   return (
     <div>
@@ -123,42 +110,141 @@ export default function SerialsPage() {
         open={open}
         onClose={() => {
           setOpen(false);
-          setProductFilter("");
         }}
         title="New serial(s)"
       >
-        <Field label="Filter product">
-          <Input
-            placeholder="Type name or SKU to filter..."
-            value={productFilter}
-            onChange={(e) => setProductFilter(e.target.value)}
-          />
-        </Field>
-        <Field label="Product">
-          <Select value={form.product_id} onChange={(e) => setForm({ ...form, product_id: e.target.value })}>
-            <option value="">
-              Select product ({filteredProducts.length} available)…
-            </option>
-            {filteredProducts.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name} {p.sku ? `(${p.sku})` : ""}
-              </option>
-            ))}
-          </Select>
-        </Field>
-        <Field label="Serial numbers (comma or newline)">
-          <textarea
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-            rows={4}
-            value={form.serial_numbers}
-            onChange={(e) => setForm({ ...form, serial_numbers: e.target.value })}
-            placeholder="SN1001&#10;SN1002&#10;SN1003"
-          />
-        </Field>
-        <Btn className="mt-3" onClick={() => void create()}>
-          Save
-        </Btn>
+        <div className="space-y-4">
+          <Field label="Product">
+            <SearchableProductSelect
+              products={products}
+              selectedId={form.product_id}
+              onSelect={(id) => setForm({ ...form, product_id: id })}
+            />
+          </Field>
+
+          <Field label="Serial numbers (comma or newline)">
+            <textarea
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none"
+              rows={4}
+              value={form.serial_numbers}
+              onChange={(e) => setForm({ ...form, serial_numbers: e.target.value })}
+              placeholder="SN1001&#10;SN1002&#10;SN1003"
+            />
+          </Field>
+
+          <Btn className="w-full py-2.5" onClick={() => void create()}>
+            Save Serials
+          </Btn>
+        </div>
       </Modal>
+    </div>
+  );
+}
+
+function SearchableProductSelect({
+  products,
+  selectedId,
+  onSelect,
+}: {
+  products: Product[];
+  selectedId: string;
+  onSelect: (id: string) => void;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const containerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const selectedProduct = products.find((p) => p.id === selectedId);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const filtered = products.filter((p) => {
+    if (!search.trim()) return true;
+    const term = search.toLowerCase().trim();
+    return (
+      p.name.toLowerCase().includes(term) ||
+      (p.sku && p.sku.toLowerCase().includes(term)) ||
+      (p.barcode && p.barcode.toLowerCase().includes(term))
+    );
+  });
+
+  return (
+    <div ref={containerRef} className="relative w-full">
+      {/* Trigger button */}
+      <button
+        type="button"
+        onClick={() => {
+          setIsOpen(!isOpen);
+          setTimeout(() => inputRef.current?.focus(), 50);
+        }}
+        className="flex w-full items-center justify-between rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-left text-sm text-slate-800 shadow-sm focus:border-teal-500 focus:outline-none"
+      >
+        <span className={selectedProduct ? "font-medium text-slate-900" : "text-slate-400"}>
+          {selectedProduct
+            ? `${selectedProduct.name} ${selectedProduct.sku ? `(${selectedProduct.sku})` : ""}`
+            : "Click to search & select product..."}
+        </span>
+        <span className="ml-2 text-xs text-slate-400">▼</span>
+      </button>
+
+      {/* Dropdown panel with search field */}
+      {isOpen && (
+        <div className="absolute z-50 mt-1 w-full rounded-lg border border-slate-200 bg-white p-2 shadow-lg">
+          <div className="mb-2">
+            <input
+              ref={inputRef}
+              type="text"
+              placeholder="Search product by name, SKU, or barcode..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm text-black outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
+            />
+          </div>
+
+          <div className="max-h-56 overflow-y-auto">
+            {filtered.length === 0 ? (
+              <div className="py-3 text-center text-xs text-slate-500">
+                No products found matching &quot;{search}&quot;
+              </div>
+            ) : (
+              filtered.map((p) => {
+                const isSelected = p.id === selectedId;
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => {
+                      onSelect(p.id);
+                      setIsOpen(false);
+                      setSearch("");
+                    }}
+                    className={`flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm transition ${
+                      isSelected
+                        ? "bg-teal-50 font-medium text-teal-800"
+                        : "text-slate-700 hover:bg-slate-100"
+                    }`}
+                  >
+                    <div>
+                      <p>{p.name}</p>
+                      {p.sku && <p className="text-xs text-slate-400 font-mono">SKU: {p.sku}</p>}
+                    </div>
+                    {isSelected && <span className="text-xs font-semibold text-teal-600">✓</span>}
+                  </button>
+                );
+              })
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

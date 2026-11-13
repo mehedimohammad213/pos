@@ -1,3 +1,4 @@
+import { PoolClient } from 'pg';
 import { query, withTransaction } from '../db/pool';
 import { nextDocumentNo } from '../utils/documents';
 import { AppError, assertFound } from '../utils/errors';
@@ -110,14 +111,15 @@ export async function listDemands(status?: string, params?: { page?: number; lim
   return r.rows;
 }
 
-export async function getDemand(id: string) {
-  const d = await query(
+export async function getDemand(id: string, client?: PoolClient) {
+  const q = client ? client.query.bind(client) : query;
+  const d = await q(
     `SELECT d.*, s.name AS supplier_name FROM purchase_demands d
      LEFT JOIN suppliers s ON s.id = d.preferred_supplier_id WHERE d.id = $1`,
     [id]
   );
   const demand = assertFound(d.rows[0]);
-  const items = await query(
+  const items = await q(
     `SELECT i.*, p.name AS product_name, p.sku, p.barcode
      FROM purchase_demand_items i JOIN products p ON p.id = i.product_id
      WHERE i.demand_id = $1`,
@@ -136,7 +138,7 @@ export async function createDemand(
   userId: string
 ) {
   if (!input.items?.length) throw new AppError('Demand needs at least one item');
-  return withTransaction(async (client) => {
+  const demandId = await withTransaction(async (client) => {
     const demandNo = await nextDocumentNo(client, 'demand', 'DEM');
     const d = await client.query(
       `INSERT INTO purchase_demands (demand_no, demand_date, preferred_supplier_id, notes, status, created_by)
@@ -152,8 +154,9 @@ export async function createDemand(
       );
     }
     await writeAudit(userId, 'demand.create', 'purchase_demand', demand.id, { demandNo }, client);
-    return getDemand(demand.id);
+    return demand.id;
   });
+  return getDemand(demandId);
 }
 
 export async function updateDemandStatus(id: string, status: string, userId: string) {
@@ -215,14 +218,15 @@ export async function listPurchases(params?: {
   return r.rows;
 }
 
-export async function getPurchase(id: string) {
-  const p = await query(
+export async function getPurchase(id: string, client?: PoolClient) {
+  const q = client ? client.query.bind(client) : query;
+  const p = await q(
     `SELECT p.*, s.name AS supplier_name FROM purchases p
      LEFT JOIN suppliers s ON s.id = p.supplier_id WHERE p.id = $1`,
     [id]
   );
   const purchase = assertFound(p.rows[0]);
-  const items = await query(
+  const items = await q(
     `SELECT i.*, pr.name AS product_name, pr.sku FROM purchase_items i
      JOIN products pr ON pr.id = i.product_id WHERE i.purchase_id = $1`,
     [id]
@@ -250,7 +254,7 @@ export async function createPurchase(
   userId: string
 ) {
   if (!input.items?.length) throw new AppError('Purchase needs items');
-  return withTransaction(async (client) => {
+  const purchaseId = await withTransaction(async (client) => {
     const purchaseNo = await nextDocumentNo(client, 'purchase', 'PUR');
     let subtotal = 0;
     for (const item of input.items) {
@@ -340,8 +344,9 @@ export async function createPurchase(
     }
 
     await writeAudit(userId, 'purchase.create', 'purchase', purchase.id, { purchaseNo }, client);
-    return getPurchase(purchase.id);
+    return purchase.id;
   });
+  return getPurchase(purchaseId);
 }
 
 export async function paySupplier(
