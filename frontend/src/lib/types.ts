@@ -221,14 +221,64 @@ export type Shift = {
 
 export type DashboardSummary = {
   date: string;
+  from?: string;
+  to?: string;
   sales: {
     invoice_count: number;
     total_sales: number;
     retail_sales: number;
     wholesale_sales: number;
     due_today: number;
+    due_amount?: number;
+    total_tax?: number;
+    total_discount?: number;
   };
   payments: { cash: number; card: number; mfs: number; credit: number };
+  expenses?: {
+    total_expenses: number;
+    expense_count: number;
+  };
+  profit?: {
+    revenue: number;
+    cost: number;
+    gross_profit: number;
+    net_profit: number;
+  } | null;
+  recent_sales?: {
+    id: string;
+    invoice_no: string;
+    sale_date: string;
+    created_at: string;
+    sale_type: string;
+    total: number;
+    paid_amount: number;
+    due_amount: number;
+    payment_status: string;
+    customer_name: string | null;
+    cashier_name: string | null;
+  }[];
+  top_products?: {
+    id: string;
+    name: string;
+    sku: string;
+    unit: string;
+    qty_sold: number;
+    total_amount: number;
+  }[];
+  low_stock_items?: {
+    id: string;
+    name: string;
+    sku: string;
+    unit: string;
+    reorder_level: number;
+    current_stock: number;
+  }[];
+  trends?: {
+    date: string;
+    label: string;
+    total: number;
+    invoice_count: number;
+  }[];
   low_stock_count: number;
   open_demands: number;
   customer_dues: number;

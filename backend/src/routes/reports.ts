@@ -7,7 +7,10 @@ const router = Router();
 
 router.get('/dashboard', authRequired, async (req, res, next) => {
   try {
-    res.json(await reports.dashboardSummary(req.query.date as string | undefined));
+    const canSeeCost = req.user?.permissions?.includes('see_cost') || req.user?.role === 'admin';
+    const from = (req.query.from as string) || (req.query.date as string) || undefined;
+    const to = (req.query.to as string) || (req.query.date as string) || from;
+    res.json(await reports.dashboardSummary({ from, to, canSeeCost }));
   } catch (e) {
     next(e);
   }
