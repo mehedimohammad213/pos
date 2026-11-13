@@ -173,6 +173,16 @@ export function InvoiceDocument({
   sale: Sale;
   shop?: ShopSettings | null;
 }) {
+  return <PosInvoiceDocument sale={sale} shop={shop} />;
+}
+
+export function PosInvoiceDocument({
+  sale,
+  shop,
+}: {
+  sale: Sale;
+  shop?: ShopSettings | null;
+}) {
   const mark = currencyMark(shop?.currency);
   const subtitle = shopSubtitle(shop);
   const time = formatReceiptTime(sale.created_at);
@@ -259,6 +269,314 @@ export function InvoiceDocument({
         <View style={styles.rule} />
         {sale.status === "voided" ? <Text style={styles.voided}>VOID</Text> : null}
         <Text style={styles.thanks}>Thank you for your purchase!</Text>
+      </Page>
+    </Document>
+  );
+}
+
+const normalStyles = StyleSheet.create({
+  page: {
+    padding: 36,
+    fontFamily: "Helvetica",
+    fontSize: 9,
+    color: "#1e293b",
+    lineHeight: 1.4,
+  },
+  headerRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    borderBottomWidth: 1.5,
+    borderBottomColor: "#0d9488",
+    paddingBottom: 14,
+    marginBottom: 16,
+  },
+  shopName: {
+    fontSize: 18,
+    fontFamily: "Helvetica-Bold",
+    color: "#0f172a",
+    marginBottom: 3,
+  },
+  shopInfo: {
+    fontSize: 8.5,
+    color: "#64748b",
+    maxWidth: 260,
+    marginBottom: 1,
+  },
+  invoiceBadge: {
+    alignItems: "flex-end",
+  },
+  invoiceTitle: {
+    fontSize: 22,
+    fontFamily: "Helvetica-Bold",
+    color: "#0d9488",
+    letterSpacing: 1,
+    marginBottom: 3,
+  },
+  invoiceMetaText: {
+    fontSize: 8.5,
+    color: "#475569",
+    textAlign: "right",
+    marginBottom: 1,
+  },
+  metaGrid: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 16,
+    backgroundColor: "#f8fafc",
+    padding: 10,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+  },
+  metaCol: {
+    flex: 1,
+  },
+  metaLabel: {
+    fontSize: 7.5,
+    fontFamily: "Helvetica-Bold",
+    color: "#64748b",
+    textTransform: "uppercase",
+    marginBottom: 2,
+  },
+  metaVal: {
+    fontSize: 10,
+    fontFamily: "Helvetica-Bold",
+    color: "#0f172a",
+  },
+  metaSub: {
+    fontSize: 8.5,
+    color: "#475569",
+  },
+  table: {
+    marginBottom: 16,
+  },
+  tableHeader: {
+    flexDirection: "row",
+    backgroundColor: "#f1f5f9",
+    borderBottomWidth: 1,
+    borderBottomColor: "#cbd5e1",
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    fontFamily: "Helvetica-Bold",
+    fontSize: 8.5,
+    color: "#334155",
+  },
+  tableRow: {
+    flexDirection: "row",
+    borderBottomWidth: 1,
+    borderBottomColor: "#f1f5f9",
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    fontSize: 8.5,
+  },
+  colSl: { width: 26 },
+  colDesc: { flex: 1, paddingRight: 8 },
+  colRate: { width: 70, textAlign: "right" },
+  colQty: { width: 45, textAlign: "center" },
+  colAmount: { width: 80, textAlign: "right" },
+  itemTitle: {
+    fontFamily: "Helvetica-Bold",
+    color: "#0f172a",
+  },
+  itemSerial: {
+    fontSize: 7.5,
+    color: "#64748b",
+    marginTop: 1,
+  },
+  summarySection: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    marginTop: 8,
+  },
+  summaryBox: {
+    width: 220,
+    backgroundColor: "#f8fafc",
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    padding: 10,
+  },
+  summaryRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 3,
+    fontSize: 8.5,
+  },
+  totalRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    borderTopWidth: 1,
+    borderTopColor: "#cbd5e1",
+    paddingTop: 5,
+    marginTop: 3,
+    fontSize: 10.5,
+    fontFamily: "Helvetica-Bold",
+    color: "#0f172a",
+  },
+  footer: {
+    position: "absolute",
+    bottom: 24,
+    left: 36,
+    right: 36,
+    borderTopWidth: 1,
+    borderTopColor: "#e2e8f0",
+    paddingTop: 8,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  footerText: {
+    fontSize: 7.5,
+    color: "#94a3b8",
+  },
+});
+
+export function NormalInvoiceDocument({
+  sale,
+  shop,
+}: {
+  sale: Sale;
+  shop?: ShopSettings | null;
+}) {
+  const mark = currencyMark(shop?.currency);
+  const time = formatReceiptTime(sale.created_at);
+  const invoiceNo = sale.invoice_no || sale.id.slice(0, 8);
+  const discount = Number(sale.discount_amount) || 0;
+  const tax = Number(sale.tax_amount) || 0;
+  const due = Number(sale.due_amount) || 0;
+  const paid = Number(sale.paid_amount) || 0;
+  const subtotal = (sale.items || []).reduce(
+    (sum, item) => sum + (item.line_total ?? Number(item.unit_price) * Number(item.quantity)),
+    0
+  );
+
+  return (
+    <Document title={`Invoice ${invoiceNo}`}>
+      <Page size="A4" style={normalStyles.page}>
+        <View style={normalStyles.headerRow}>
+          <View>
+            <Text style={normalStyles.shopName}>{shop?.name || "Shop Name"}</Text>
+            {shop?.address ? <Text style={normalStyles.shopInfo}>{shop.address}</Text> : null}
+            {shop?.phone ? <Text style={normalStyles.shopInfo}>Phone: {shop.phone}</Text> : null}
+          </View>
+          <View style={normalStyles.invoiceBadge}>
+            <Text style={normalStyles.invoiceTitle}>INVOICE</Text>
+            <Text style={normalStyles.invoiceMetaText}>Invoice #: {invoiceNo}</Text>
+            <Text style={normalStyles.invoiceMetaText}>Date: {formatReceiptDate(sale.sale_date)}</Text>
+            {time ? <Text style={normalStyles.invoiceMetaText}>Time: {time}</Text> : null}
+            <Text style={normalStyles.invoiceMetaText}>
+              Type: {sale.sale_type === "wholesale" ? "Wholesale" : "Retail"}
+            </Text>
+          </View>
+        </View>
+
+        <View style={normalStyles.metaGrid}>
+          <View style={normalStyles.metaCol}>
+            <Text style={normalStyles.metaLabel}>Bill To / Customer:</Text>
+            <Text style={normalStyles.metaVal}>{sale.customer_name || "Walk-in Customer"}</Text>
+            {sale.customer_phone ? (
+              <Text style={normalStyles.metaSub}>Phone: {sale.customer_phone}</Text>
+            ) : null}
+          </View>
+          {sale.cashier_name ? (
+            <View style={[normalStyles.metaCol, { alignItems: "flex-end" }]}>
+              <Text style={normalStyles.metaLabel}>Cashier:</Text>
+              <Text style={normalStyles.metaVal}>{sale.cashier_name}</Text>
+            </View>
+          ) : null}
+        </View>
+
+        <View style={normalStyles.table}>
+          <View style={normalStyles.tableHeader}>
+            <Text style={normalStyles.colSl}>#</Text>
+            <Text style={normalStyles.colDesc}>Product</Text>
+            <Text style={normalStyles.colRate}>Unit Price</Text>
+            <Text style={normalStyles.colQty}>Qty</Text>
+            <Text style={normalStyles.colAmount}>Total ({mark})</Text>
+          </View>
+
+          {(sale.items || []).map((item, index) => {
+            const serials = (item.serials || []).map((s) => s.serial_number).filter(Boolean);
+            const line = item.line_total ?? Number(item.unit_price) * Number(item.quantity);
+            return (
+              <View key={item.id || index} style={normalStyles.tableRow} wrap={false}>
+                <Text style={normalStyles.colSl}>{index + 1}</Text>
+                <View style={normalStyles.colDesc}>
+                  <Text style={normalStyles.itemTitle}>{item.product_name || "Item"}</Text>
+                  {serials.length ? (
+                    <Text style={normalStyles.itemSerial}>S/N: {serials.join(", ")}</Text>
+                  ) : null}
+                </View>
+                <Text style={normalStyles.colRate}>{money(item.unit_price)}</Text>
+                <Text style={normalStyles.colQty}>{qty(item.quantity)}</Text>
+                <Text style={normalStyles.colAmount}>{money(line)}</Text>
+              </View>
+            );
+          })}
+        </View>
+
+        <View style={normalStyles.summarySection}>
+          <View style={normalStyles.summaryBox}>
+            <View style={normalStyles.summaryRow}>
+              <Text style={{ color: "#64748b" }}>Subtotal:</Text>
+              <Text style={{ fontFamily: "Helvetica-Bold" }}>
+                {mark}{money(subtotal)}
+              </Text>
+            </View>
+            {discount > 0 ? (
+              <View style={normalStyles.summaryRow}>
+                <Text style={{ color: "#64748b" }}>Discount:</Text>
+                <Text style={{ color: "#dc2626" }}>-{mark}{money(discount)}</Text>
+              </View>
+            ) : null}
+            {tax > 0 ? (
+              <View style={normalStyles.summaryRow}>
+                <Text style={{ color: "#64748b" }}>Tax:</Text>
+                <Text>{mark}{money(tax)}</Text>
+              </View>
+            ) : null}
+            <View style={normalStyles.totalRow}>
+              <Text>Total Payable:</Text>
+              <Text>
+                {mark}{money(sale.total)}
+              </Text>
+            </View>
+            <View style={[normalStyles.summaryRow, { marginTop: 5 }]}>
+              <Text style={{ color: "#64748b" }}>Paid:</Text>
+              <Text style={{ color: "#16a34a", fontFamily: "Helvetica-Bold" }}>
+                {mark}{money(paid)}
+              </Text>
+            </View>
+            {due > 0 ? (
+              <View style={normalStyles.summaryRow}>
+                <Text style={{ color: "#dc2626", fontFamily: "Helvetica-Bold" }}>Due Balance:</Text>
+                <Text style={{ color: "#dc2626", fontFamily: "Helvetica-Bold" }}>
+                  {mark}{money(due)}
+                </Text>
+              </View>
+            ) : null}
+          </View>
+        </View>
+
+        {sale.status === "voided" ? (
+          <Text
+            style={{
+              textAlign: "center",
+              color: "#dc2626",
+              fontFamily: "Helvetica-Bold",
+              fontSize: 14,
+              marginTop: 14,
+            }}
+          >
+            *** VOIDED INVOICE ***
+          </Text>
+        ) : null}
+
+        <View style={normalStyles.footer}>
+          <Text style={normalStyles.footerText}>Thank you for your business!</Text>
+          <Text style={normalStyles.footerText}>Computer generated invoice</Text>
+        </View>
       </Page>
     </Document>
   );

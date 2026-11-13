@@ -119,7 +119,7 @@ export function Modal({
       <button type="button" className="absolute inset-0 bg-black/50" aria-label="Close" onClick={onClose} />
       <div
         className={`relative max-h-[90vh] overflow-y-auto rounded-xl bg-white p-5 shadow-xl ${
-          wide ? "w-full max-w-2xl" : "w-full max-w-lg"
+          wide ? "w-full max-w-3xl" : "w-full max-w-lg"
         }`}
       >
         <ModalHeader title={title} onClose={onClose} />
