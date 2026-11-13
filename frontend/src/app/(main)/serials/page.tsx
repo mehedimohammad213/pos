@@ -8,6 +8,7 @@ import { Alert, Btn, Field, Input, Modal, PageHeader, Select, TableWrap, Td, Th,
 export default function SerialsPage() {
   const [rows, setRows] = useState<Serial[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [productFilter, setProductFilter] = useState("");
   const PAGE_SIZE = 10;
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -30,29 +31,59 @@ export default function SerialsPage() {
     setPage(data.page);
   }
 
+  async function loadProductsList() {
+    try {
+      const res = await api<Product[] | PaginatedResponse<Product>>("/catalog/products");
+      const list = Array.isArray(res) ? res : res?.items || [];
+      setProducts(list);
+    } catch {
+      setProducts([]);
+    }
+  }
+
   useEffect(() => {
     void load(1);
-    void api<Product[]>("/catalog/products").then(setProducts);
+    void loadProductsList();
   }, []);
 
   async function create() {
     setError("");
+    if (!form.product_id) {
+      setError("Please select a product");
+      return;
+    }
     try {
       const serial_numbers = form.serial_numbers
         .split(/[\n,]+/)
         .map((s) => s.trim())
         .filter(Boolean);
+      if (!serial_numbers.length) {
+        setError("Please enter at least one serial number");
+        return;
+      }
       await api("/catalog/serials", {
         method: "POST",
         body: JSON.stringify({ product_id: form.product_id, serial_numbers }),
       });
       setOpen(false);
       setForm({ product_id: "", serial_numbers: "" });
+      setProductFilter("");
       await load();
+      await loadProductsList();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed");
     }
   }
+
+  const filteredProducts = products.filter((p) => {
+    if (!productFilter.trim()) return true;
+    const term = productFilter.toLowerCase().trim();
+    return (
+      p.name.toLowerCase().includes(term) ||
+      (p.sku && p.sku.toLowerCase().includes(term)) ||
+      (p.barcode && p.barcode.toLowerCase().includes(term))
+    );
+  });
 
   return (
     <div>
@@ -88,17 +119,31 @@ export default function SerialsPage() {
           void load(p);
         }}
       />
-      <Modal open={open} onClose={() => setOpen(false)} title="New serial(s)">
+      <Modal
+        open={open}
+        onClose={() => {
+          setOpen(false);
+          setProductFilter("");
+        }}
+        title="New serial(s)"
+      >
+        <Field label="Filter product">
+          <Input
+            placeholder="Type name or SKU to filter..."
+            value={productFilter}
+            onChange={(e) => setProductFilter(e.target.value)}
+          />
+        </Field>
         <Field label="Product">
           <Select value={form.product_id} onChange={(e) => setForm({ ...form, product_id: e.target.value })}>
-            <option value="">Select…</option>
-            {products
-              .filter((p) => p.serial_required)
-              .map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
+            <option value="">
+              Select product ({filteredProducts.length} available)…
+            </option>
+            {filteredProducts.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name} {p.sku ? `(${p.sku})` : ""}
+              </option>
+            ))}
           </Select>
         </Field>
         <Field label="Serial numbers (comma or newline)">
@@ -107,6 +152,7 @@ export default function SerialsPage() {
             rows={4}
             value={form.serial_numbers}
             onChange={(e) => setForm({ ...form, serial_numbers: e.target.value })}
+            placeholder="SN1001&#10;SN1002&#10;SN1003"
           />
         </Field>
         <Btn className="mt-3" onClick={() => void create()}>

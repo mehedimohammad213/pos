@@ -660,6 +660,7 @@ export async function addSerials(
   purchaseId?: string
 ) {
   const run = async (c: PoolClient) => {
+    await c.query(`UPDATE products SET serial_required = TRUE WHERE id = $1`, [productId]);
     const inserted = [];
     for (const sn of serialNumbers) {
       const r = await c.query(
