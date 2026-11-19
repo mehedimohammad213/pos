@@ -16,6 +16,7 @@ import warrantyRoutes from './routes/warranty';
 import expenseRoutes from './routes/expenses';
 import reportRoutes from './routes/reports';
 import shiftRoutes from './routes/shifts';
+import documentsRoutes from './routes/documents';
 
 export function createApp() {
   const app = express();
@@ -47,6 +48,7 @@ export function createApp() {
   app.use('/api/expenses', expenseRoutes);
   app.use('/api/reports', reportRoutes);
   app.use('/api/shifts', shiftRoutes);
+  app.use('/api/documents', documentsRoutes);
 
   app.use(errorHandler);
   return app;

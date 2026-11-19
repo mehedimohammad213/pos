@@ -28,6 +28,7 @@ const NAV: NavItem[] = [
   { href: "/warranty", label: "Warranty", icon: "✓" },
   { href: "/expenses", label: "Expenses", icon: "−" },
   { href: "/reports", label: "Reports", icon: "▤" },
+  { href: "/documents", label: "Documents", icon: "☰", roles: ["manager"] },
   { href: "/settings", label: "Settings", icon: "⚙" },
 ];
 

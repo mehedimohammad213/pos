@@ -207,6 +207,21 @@ export type ShopSettings = {
   vat_tin?: string;
   default_tax_percent?: number | string;
   currency?: string;
+  invoice_prefix?: string;
+  demand_prefix?: string;
+};
+
+export type InvoicePaper = "a4" | "pos80";
+
+export type InvoiceTemplate = {
+  id: string;
+  name: string;
+  paper: InvoicePaper;
+  content_html: string;
+  content_json?: unknown;
+  is_default: boolean;
+  created_at?: string;
+  updated_at?: string;
 };
 
 export type Shift = {

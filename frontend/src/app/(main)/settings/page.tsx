@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -77,6 +78,20 @@ export default function SettingsPage() {
       <PageHeader title="Settings" />
       {msg ? <Alert tone="success">{msg}</Alert> : null}
       {error ? <Alert tone="error">{error}</Alert> : null}
+
+      <section className="rounded-xl border border-slate-200 bg-white p-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="font-semibold text-slate-800">Invoice documents</h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Design printable invoices with a Google Docs–style editor and set them as the print default.
+            </p>
+          </div>
+          <Link href="/documents">
+            <Btn variant="secondary">Open document designer</Btn>
+          </Link>
+        </div>
+      </section>
 
       <section className="rounded-xl border border-slate-200 bg-white p-5">
         <h2 className="font-semibold text-slate-800">Shop profile</h2>
