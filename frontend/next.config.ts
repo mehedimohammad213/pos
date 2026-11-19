@@ -6,8 +6,8 @@ const nextConfig: NextConfig = {
   /* config options here */
   cacheComponents: true,
   partialPrefetching: true,
-  // Allow phone/LAN access to Next.js HMR/dev assets
-  allowedDevOrigins: ["192.168.20.244", "93.127.172.77", "localhost", "127.0.0.1"],
+  // Allow live/public + local access to Next.js HMR/dev assets
+  allowedDevOrigins: ["93.127.172.77", "localhost", "127.0.0.1"],
   turbopack: {
     rules: {
       "*.css": {
