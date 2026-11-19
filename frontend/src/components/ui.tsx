@@ -140,6 +140,70 @@ function ModalHeader({ title, onClose }: { title: string; onClose: () => void })
   );
 }
 
+/** Right-to-left slide-over drawer */
+export function Drawer({
+  open,
+  onClose,
+  title,
+  children,
+  footer,
+  wide,
+}: {
+  open: boolean;
+  onClose: () => void;
+  title: string;
+  children: ReactNode;
+  footer?: ReactNode;
+  wide?: boolean;
+}) {
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex justify-end">
+      <button
+        type="button"
+        className="absolute inset-0 bg-black/40 transition-opacity"
+        aria-label="Close drawer"
+        onClick={onClose}
+      />
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        className={`relative flex h-full w-full flex-col bg-white shadow-2xl animate-in slide-in-from-right duration-300 ${
+          wide ? "max-w-xl" : "max-w-md"
+        }`}
+        style={{
+          animation: "drawerSlideIn 0.28s ease-out",
+        }}
+      >
+        <style>{`
+          @keyframes drawerSlideIn {
+            from { transform: translateX(100%); }
+            to { transform: translateX(0); }
+          }
+        `}</style>
+        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-slate-200 px-5 py-4">
+          <h2 className="truncate text-lg font-semibold text-slate-900">{title}</h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg p-1.5 text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
+            aria-label="Close"
+          >
+            ✕
+          </button>
+        </div>
+        <div className="flex-1 overflow-y-auto px-5 py-4">{children}</div>
+        {footer ? (
+          <div className="shrink-0 border-t border-slate-200 bg-slate-50/80 px-5 py-4">
+            {footer}
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 export function Money({ amount }: { amount: number }) {
   return <span className="font-mono tabular-nums">{amount}</span>;
 }
