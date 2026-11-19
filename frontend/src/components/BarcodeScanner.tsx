@@ -36,10 +36,32 @@ function errorMessage(err: unknown): string {
   return "Unable to open camera.";
 }
 
+function isCameraApiAvailable() {
+  return (
+    typeof window !== "undefined" &&
+    typeof navigator !== "undefined" &&
+    !!navigator.mediaDevices &&
+    typeof navigator.mediaDevices.getUserMedia === "function"
+  );
+}
+
+function httpsAppUrl() {
+  if (typeof window === "undefined") return "";
+  const url = new URL(window.location.href);
+  url.protocol = "https:";
+  // Dev HTTPS server still uses 9005 with --experimental-https
+  return url.toString();
+}
+
 function friendlyCameraError(raw: string): string {
   const msg = raw.toLowerCase();
-  if (msg.includes("secure context") || msg.includes("https")) {
-    return "Camera needs HTTPS or localhost. Open the app from a secure URL.";
+  if (
+    msg.includes("streaming not supported") ||
+    msg.includes("secure context") ||
+    msg.includes("https") ||
+    msg.includes("mediadevices")
+  ) {
+    return "Camera needs a secure page (HTTPS or localhost). Open this app with https:// then allow camera.";
   }
   if (
     msg.includes("notallowed") ||
@@ -103,6 +125,7 @@ export function BarcodeScanner({
   const [facing, setFacing] = useState<Facing>("environment");
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [error, setError] = useState<string | null>(null);
+  const [needsHttps, setNeedsHttps] = useState(false);
   const [hasFront, setHasFront] = useState(true);
   const [hasBack, setHasBack] = useState(true);
   const [torchOn, setTorchOn] = useState(false);
@@ -140,6 +163,7 @@ export function BarcodeScanner({
     doneRef.current = false;
     setStatus("loading");
     setError(null);
+    setNeedsHttps(false);
     setTorchOn(false);
     setTorchSupported(false);
     setLastHint(
@@ -147,6 +171,18 @@ export function BarcodeScanner({
         ? "Back camera — hold barcode steady in the focus box"
         : "Front camera — hold barcode up to the lens in the focus box"
     );
+
+    // Browsers block camera on plain HTTP LAN IPs (e.g. http://192.168.x.x)
+    if (!window.isSecureContext || !isCameraApiAvailable()) {
+      setNeedsHttps(true);
+      setError(
+        friendlyCameraError(
+          "Camera streaming not supported by the browser on insecure HTTP. Use HTTPS or localhost."
+        )
+      );
+      setStatus("error");
+      return;
+    }
 
     await safeStop();
 
@@ -379,6 +415,18 @@ export function BarcodeScanner({
           {error || lastHint}
         </p>
         <div className="flex gap-2">
+          {needsHttps ? (
+            <Btn
+              type="button"
+              variant="primary"
+              className="text-xs px-2.5 py-1.5"
+              onClick={() => {
+                window.location.href = httpsAppUrl();
+              }}
+            >
+              Open HTTPS version
+            </Btn>
+          ) : null}
           {status === "error" ? (
             <Btn
               type="button"

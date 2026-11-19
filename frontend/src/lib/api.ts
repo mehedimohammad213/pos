@@ -1,14 +1,11 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:9006";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:9006";
 
 function getApiBaseUrl(): string {
-  if (typeof window === "undefined") return API_URL;
-
-  const url = new URL(API_URL, window.location.origin);
-  const localHosts = ["localhost", "127.0.0.1", "::1"];
-  if (localHosts.includes(url.hostname) && !localHosts.includes(window.location.hostname)) {
-    url.hostname = window.location.hostname;
+  // Browser: always same-origin so HTTPS UI can use Next.js /api rewrite (no mixed content).
+  if (typeof window !== "undefined") {
+    return window.location.origin;
   }
-  return url.origin;
+  return API_URL;
 }
 
 export const ACCESS_TOKEN_KEY = "pos_access_token";

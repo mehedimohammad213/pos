@@ -1,9 +1,13 @@
 import type { NextConfig } from "next";
 
+const backendOrigin = process.env.INTERNAL_API_URL || "http://127.0.0.1:9006";
+
 const nextConfig: NextConfig = {
   /* config options here */
   cacheComponents: true,
   partialPrefetching: true,
+  // Allow phone/LAN access to Next.js HMR/dev assets
+  allowedDevOrigins: ["192.168.20.244", "93.127.172.77", "localhost", "127.0.0.1"],
   turbopack: {
     rules: {
       "*.css": {
@@ -11,6 +15,28 @@ const nextConfig: NextConfig = {
         as: "*.css",
       },
     },
+  },
+  // Same-origin /api proxy so HTTPS pages can call the API without mixed-content blocks
+  async rewrites() {
+    return [
+      {
+        source: "/api/:path*",
+        destination: `${backendOrigin}/api/:path*`,
+      },
+    ];
+  },
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          {
+            key: "Permissions-Policy",
+            value: "camera=(self), microphone=()",
+          },
+        ],
+      },
+    ];
   },
 };
 
