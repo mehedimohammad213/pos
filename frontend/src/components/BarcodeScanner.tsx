@@ -1,7 +1,7 @@
 "use client";
 
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
-import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Btn } from "@/components/ui";
 
 type Facing = "environment" | "user";
@@ -19,6 +19,47 @@ const BARCODE_FORMATS = [
   Html5QrcodeSupportedFormats.QR_CODE,
   Html5QrcodeSupportedFormats.DATA_MATRIX,
 ];
+
+const SCAN_CONFIG = {
+  fps: 10,
+  // Fixed size — function-based qrbox can be 0x0 before video layout and fail start
+  qrbox: { width: 260, height: 120 },
+  disableFlip: false,
+};
+
+function errorMessage(err: unknown): string {
+  if (typeof err === "string") return err;
+  if (err instanceof Error) return err.message;
+  if (err && typeof err === "object" && "message" in err) {
+    return String((err as { message: unknown }).message);
+  }
+  return "Unable to open camera.";
+}
+
+function friendlyCameraError(raw: string): string {
+  const msg = raw.toLowerCase();
+  if (msg.includes("secure context") || msg.includes("https")) {
+    return "Camera needs HTTPS or localhost. Open the app from a secure URL.";
+  }
+  if (
+    msg.includes("notallowed") ||
+    msg.includes("permission") ||
+    msg.includes("denied") ||
+    msg.includes("notallowederror")
+  ) {
+    return "Camera permission blocked. Allow camera access in the browser address bar, then tap Retry.";
+  }
+  if (msg.includes("notfound") || msg.includes("no camera") || msg.includes("requested device not found")) {
+    return "No camera found on this device.";
+  }
+  if (msg.includes("notreadable") || msg.includes("trackstart") || msg.includes("in use")) {
+    return "Camera is busy in another app/tab. Close it, then tap Retry.";
+  }
+  if (msg.includes("overconstrained")) {
+    return "This camera mode is not supported. Try the other camera.";
+  }
+  return raw || "Unable to open camera.";
+}
 
 function classifyFacing(label: string): Facing | null {
   const l = label.toLowerCase();
@@ -54,8 +95,8 @@ export function BarcodeScanner({
   const reactId = useId().replace(/:/g, "");
   const elementId = `hw-pos-scanner-${reactId}`;
   const scannerRef = useRef<Html5Qrcode | null>(null);
+  const runIdRef = useRef(0);
   const doneRef = useRef(false);
-  const startingRef = useRef(false);
   const onScanRef = useRef(onScan);
   onScanRef.current = onScan;
 
@@ -68,138 +109,189 @@ export function BarcodeScanner({
   const [torchSupported, setTorchSupported] = useState(false);
   const [lastHint, setLastHint] = useState("Align barcode inside the focus box");
 
-  const stopScanner = useCallback(async () => {
+  async function safeStop() {
     const scanner = scannerRef.current;
+    scannerRef.current = null;
     if (!scanner) return;
     try {
       if (scanner.isScanning) {
         await scanner.stop();
       }
+    } catch {
+      // ignore
+    }
+    try {
       scanner.clear();
     } catch {
-      // ignore stop/clear races while switching cameras
+      // ignore
     }
-  }, []);
+  }
 
-  const startWithFacing = useCallback(
-    async (nextFacing: Facing) => {
-      if (doneRef.current || startingRef.current) return;
-      startingRef.current = true;
-      setStatus("loading");
-      setError(null);
-      setTorchOn(false);
-      setTorchSupported(false);
-      setLastHint(
-        nextFacing === "environment"
-          ? "Back camera — hold barcode steady in the focus box"
-          : "Front camera — hold barcode up to the lens in the focus box"
-      );
+  async function tryStart(
+    scanner: Html5Qrcode,
+    camera: string | MediaTrackConstraints,
+    onSuccess: (text: string) => void
+  ) {
+    await scanner.start(camera, SCAN_CONFIG, onSuccess, () => {});
+  }
+
+  async function startWithFacing(nextFacing: Facing) {
+    const runId = ++runIdRef.current;
+    doneRef.current = false;
+    setStatus("loading");
+    setError(null);
+    setTorchOn(false);
+    setTorchSupported(false);
+    setLastHint(
+      nextFacing === "environment"
+        ? "Back camera — hold barcode steady in the focus box"
+        : "Front camera — hold barcode up to the lens in the focus box"
+    );
+
+    await safeStop();
+
+    // Let React paint the empty scanner host before Html5Qrcode looks it up
+    await new Promise<void>((resolve) => {
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+    });
+    if (runId !== runIdRef.current) return;
+
+    const host = document.getElementById(elementId);
+    if (!host) {
+      setError("Scanner view not ready. Tap Retry.");
+      setStatus("error");
+      return;
+    }
+    host.innerHTML = "";
+
+    const scanner = new Html5Qrcode(elementId, {
+      verbose: false,
+      formatsToSupport: BARCODE_FORMATS,
+      useBarCodeDetectorIfSupported: true,
+    });
+    scannerRef.current = scanner;
+
+    const onSuccess = (text: string) => {
+      if (doneRef.current || runId !== runIdRef.current) return;
+      doneRef.current = true;
+      const code = text.trim();
+      setLastHint(`Scanned: ${code}`);
+      void safeStop().finally(() => {
+        onScanRef.current(code);
+      });
+    };
+
+    const attempts: Array<string | MediaTrackConstraints> = [
+      { facingMode: nextFacing },
+      { facingMode: nextFacing === "environment" ? "user" : "environment" },
+    ];
+
+    try {
+      // Permission + camera list (labels fill in after permission on some browsers)
+      let cameras: { id: string; label: string }[] = [];
+      try {
+        cameras = await Html5Qrcode.getCameras();
+      } catch {
+        cameras = [];
+      }
+      if (runId !== runIdRef.current) return;
+
+      let frontId: string | null = null;
+      let backId: string | null = null;
+      for (const cam of cameras) {
+        const kind = classifyFacing(cam.label);
+        if (kind === "user" && !frontId) frontId = cam.id;
+        if (kind === "environment" && !backId) backId = cam.id;
+      }
+      if (!frontId && !backId && cameras.length) {
+        backId = cameras[0]?.id ?? null;
+        frontId = cameras[1]?.id ?? cameras[0]?.id ?? null;
+      }
+
+      setHasBack(Boolean(backId || cameras.length));
+      setHasFront(Boolean(frontId || cameras.length > 1 || (!backId && cameras.length === 1)));
+
+      const preferredId = nextFacing === "environment" ? backId || frontId : frontId || backId;
+      if (preferredId) attempts.unshift(preferredId);
+
+      for (const cam of cameras) {
+        if (!attempts.includes(cam.id)) attempts.push(cam.id);
+      }
+
+      let lastErr: unknown = null;
+      let started = false;
+
+      for (const camera of attempts) {
+        if (runId !== runIdRef.current) return;
+        try {
+          // Fresh stop between attempts if a previous partial start left state
+          if (scanner.isScanning) {
+            await scanner.stop();
+          }
+        } catch {
+          // ignore
+        }
+        try {
+          await tryStart(scanner, camera, onSuccess);
+          started = true;
+          // Prefer reporting the facing the user asked for; if we fell back, detect from track
+          let resolvedFacing = nextFacing;
+          try {
+            const settings = scanner.getRunningTrackSettings();
+            if (settings.facingMode === "user" || settings.facingMode === "environment") {
+              resolvedFacing = settings.facingMode;
+            } else if (typeof camera === "string") {
+              if (camera === frontId) resolvedFacing = "user";
+              if (camera === backId) resolvedFacing = "environment";
+            } else if (typeof camera.facingMode === "string") {
+              resolvedFacing = camera.facingMode as Facing;
+            }
+          } catch {
+            // keep nextFacing
+          }
+          setFacing(resolvedFacing);
+          break;
+        } catch (err) {
+          lastErr = err;
+        }
+      }
+
+      if (runId !== runIdRef.current) return;
+
+      if (!started) {
+        throw lastErr ?? new Error("Unable to open camera.");
+      }
 
       try {
-        await stopScanner();
-
-        if (!scannerRef.current) {
-          scannerRef.current = new Html5Qrcode(elementId, {
-            verbose: false,
-            formatsToSupport: BARCODE_FORMATS,
-            useBarCodeDetectorIfSupported: true,
-          });
-        }
-
-        const scanner = scannerRef.current;
-        const cameras = await Html5Qrcode.getCameras();
-        if (!cameras.length) {
-          throw new Error("No camera found. Allow camera permission and try again.");
-        }
-
-        let frontId: string | null = null;
-        let backId: string | null = null;
-        for (const cam of cameras) {
-          const kind = classifyFacing(cam.label);
-          if (kind === "user" && !frontId) frontId = cam.id;
-          if (kind === "environment" && !backId) backId = cam.id;
-        }
-
-        // If labels are empty/unknown (common before permission), assume first=back, second=front
-        if (!frontId && !backId) {
-          if (cameras.length >= 2) {
-            backId = cameras[0].id;
-            frontId = cameras[1].id;
-          } else {
-            backId = cameras[0].id;
-            frontId = cameras[0].id;
-          }
-        }
-
-        setHasBack(Boolean(backId));
-        setHasFront(Boolean(frontId));
-
-        const preferredId = nextFacing === "environment" ? backId || frontId : frontId || backId;
-        const cameraConfig: MediaTrackConstraints | string = preferredId
-          ? preferredId
-          : { facingMode: { ideal: nextFacing } };
-
-        await scanner.start(
-          cameraConfig,
-          {
-            fps: 12,
-            qrbox: (viewfinderWidth, viewfinderHeight) => {
-              const width = Math.min(Math.floor(viewfinderWidth * 0.86), 340);
-              const height = Math.min(Math.floor(viewfinderHeight * 0.28), 140);
-              return { width, height: Math.max(height, 90) };
-            },
-            aspectRatio: 1.777,
-            disableFlip: false,
-          },
-          (text) => {
-            if (doneRef.current) return;
-            doneRef.current = true;
-            setLastHint(`Scanned: ${text.trim()}`);
-            void stopScanner().finally(() => {
-              onScanRef.current(text.trim());
-            });
-          },
-          () => {
-            // continuous "not found" callbacks — ignore
-          }
-        );
-
-        try {
-          const caps = scanner.getRunningTrackCameraCapabilities();
-          setTorchSupported(caps.torchFeature().isSupported());
-        } catch {
-          setTorchSupported(false);
-        }
-
-        setFacing(nextFacing);
-        setStatus("ready");
-      } catch (err) {
-        const message =
-          err instanceof Error ? err.message : "Unable to open camera. Check permissions.";
-        setError(message);
-        setStatus("error");
-      } finally {
-        startingRef.current = false;
+        const caps = scanner.getRunningTrackCameraCapabilities();
+        setTorchSupported(caps.torchFeature().isSupported());
+      } catch {
+        setTorchSupported(false);
       }
-    },
-    [elementId, stopScanner]
-  );
+
+      setStatus("ready");
+      setError(null);
+    } catch (err) {
+      if (runId !== runIdRef.current) return;
+      setError(friendlyCameraError(errorMessage(err)));
+      setStatus("error");
+      await safeStop();
+    }
+  }
 
   useEffect(() => {
-    doneRef.current = false;
     void startWithFacing("environment");
     return () => {
+      runIdRef.current += 1;
       doneRef.current = true;
-      void stopScanner();
-      scannerRef.current = null;
+      void safeStop();
     };
-    // mount once per modal open
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function switchFacing(next: Facing) {
+    if (status === "loading") return;
     if (next === facing && status === "ready") return;
-    doneRef.current = false;
     await startWithFacing(next);
   }
 
@@ -265,9 +357,8 @@ export function BarcodeScanner({
           className="hw-barcode-scanner min-h-[280px] w-full overflow-hidden [&_img]:hidden [&_video]:h-auto [&_video]:w-full [&_video]:object-cover"
         />
 
-        {/* Barcode focus frame — corners + scan line over library qrbox */}
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-          <div className="relative h-[28%] min-h-[90px] w-[86%] max-w-[340px]">
+          <div className="relative h-[120px] w-[260px] max-w-[86%]">
             <div className="absolute -left-1 -top-1 h-6 w-6 rounded-tl-md border-l-[3px] border-t-[3px] border-teal-300" />
             <div className="absolute -right-1 -top-1 h-6 w-6 rounded-tr-md border-r-[3px] border-t-[3px] border-teal-300" />
             <div className="absolute -bottom-1 -left-1 h-6 w-6 rounded-bl-md border-b-[3px] border-l-[3px] border-teal-300" />
@@ -278,7 +369,7 @@ export function BarcodeScanner({
 
         {status === "loading" ? (
           <div className="absolute inset-0 flex items-center justify-center bg-slate-950/70 text-sm text-white">
-            Opening {facing === "environment" ? "back" : "front"} camera…
+            Opening camera…
           </div>
         ) : null}
       </div>
@@ -293,10 +384,7 @@ export function BarcodeScanner({
               type="button"
               variant="secondary"
               className="text-xs px-2.5 py-1.5"
-              onClick={() => {
-                doneRef.current = false;
-                void startWithFacing(facing);
-              }}
+              onClick={() => void startWithFacing(facing)}
             >
               Retry camera
             </Btn>
