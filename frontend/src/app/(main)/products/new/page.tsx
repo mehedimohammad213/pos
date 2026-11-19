@@ -116,6 +116,7 @@ export default function NewProductPage() {
   const scannerRef = useRef<HTMLInputElement>(null);
   const formTopRef = useRef<HTMLDivElement>(null);
 
+  const [openCameraRequest, setOpenCameraRequest] = useState(0);
   const [form, setForm] = useState<ProductForm>(defaultProduct);
   const [categories, setCategories] = useState<Category[]>([]);
   const [brands, setBrands] = useState<Brand[]>([]);
@@ -314,10 +315,18 @@ export default function NewProductPage() {
             <Btn
               type="button"
               variant="secondary"
+              onClick={() => setOpenCameraRequest((n) => n + 1)}
+              className="border-teal-500 bg-teal-50 text-teal-800 font-medium hover:bg-teal-100"
+            >
+              Camera scan
+            </Btn>
+            <Btn
+              type="button"
+              variant="secondary"
               onClick={focusBarcodeScanner}
               className="border-teal-500 bg-teal-50 text-teal-800 font-medium hover:bg-teal-100"
             >
-              🎯 Barcode focus
+              Barcode focus
             </Btn>
             <Link href="/products/import">
               <Btn type="button" variant="secondary" title="Import multiple products at once via CSV">
@@ -424,6 +433,7 @@ export default function NewProductPage() {
             barcode={form.barcode}
             onChange={(val) => setForm((prev) => ({ ...prev, barcode: val }))}
             scannerRef={scannerRef}
+            openCameraRequest={openCameraRequest}
           />
         </Card>
 

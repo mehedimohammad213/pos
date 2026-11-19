@@ -47,11 +47,14 @@ export function BarcodeInputs({
   onChange,
   excludeProductId,
   scannerRef: externalScannerRef,
+  openCameraRequest = 0,
 }: {
   barcode: string;
   onChange: (val: string) => void;
   excludeProductId?: string;
   scannerRef?: React.RefObject<HTMLInputElement | null>;
+  /** Increment to open the camera scan modal from a parent (e.g. page header). */
+  openCameraRequest?: number;
 }) {
   const internalScannerRef = useRef<HTMLInputElement>(null);
   const scannerRef = externalScannerRef || internalScannerRef;
@@ -65,6 +68,10 @@ export function BarcodeInputs({
   useEffect(() => {
     setScannerVal(barcode);
   }, [barcode]);
+
+  useEffect(() => {
+    if (openCameraRequest > 0) setScanOpen(true);
+  }, [openCameraRequest]);
 
   // Check duplicate barcode in DB
   useEffect(() => {
@@ -275,8 +282,10 @@ export function BarcodeInputs({
         </div>
       ) : null}
 
-      <Modal open={scanOpen} onClose={() => setScanOpen(false)} title="Camera scan" wide>
-        <BarcodeScanner onScan={handleCameraScan} onClose={() => setScanOpen(false)} />
+      <Modal open={scanOpen} onClose={() => setScanOpen(false)} title="Camera barcode scan" wide>
+        {scanOpen ? (
+          <BarcodeScanner onScan={handleCameraScan} onClose={() => setScanOpen(false)} />
+        ) : null}
       </Modal>
     </div>
   );

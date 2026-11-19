@@ -345,17 +345,19 @@ export default function PosPage() {
         {receipt ? <InvoicePreview sale={receipt} shop={shop} onClose={() => setReceipt(null)} /> : null}
       </Modal>
 
-      <Modal open={scanOpen} onClose={() => setScanOpen(false)} title="Scan barcode" wide>
-        <BarcodeScanner
-          onScan={(code) => {
-            setScanOpen(false);
-            setBarcode(code);
-            void api<Product>(`/catalog/products/barcode/${encodeURIComponent(code)}`)
-              .then(addProduct)
-              .catch(() => setError("Product not found"));
-          }}
-          onClose={() => setScanOpen(false)}
-        />
+      <Modal open={scanOpen} onClose={() => setScanOpen(false)} title="Camera barcode scan" wide>
+        {scanOpen ? (
+          <BarcodeScanner
+            onScan={(code) => {
+              setScanOpen(false);
+              setBarcode(code);
+              void api<Product>(`/catalog/products/barcode/${encodeURIComponent(code)}`)
+                .then(addProduct)
+                .catch(() => setError("Product not found"));
+            }}
+            onClose={() => setScanOpen(false)}
+          />
+        ) : null}
       </Modal>
 
       <Modal open={!!serialModal} onClose={() => setSerialModal(null)} title="Pick serials" wide>
