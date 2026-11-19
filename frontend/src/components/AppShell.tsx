@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Suspense, useState, type ReactNode } from "react";
+import { Suspense, useEffect, useState, type ReactNode } from "react";
 import { useAuth } from "@/lib/auth";
 import type { PermissionKey } from "@/lib/types";
 
@@ -43,13 +43,13 @@ function SidebarNav({ items, onClose }: { items: NavItem[]; onClose: () => void 
           key={item.href}
           href={item.href}
           onClick={onClose}
-          className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+          className={`flex min-h-11 items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
             isActive(item.href)
               ? "bg-teal-600 text-white"
               : "text-slate-300 hover:bg-slate-800 hover:text-white"
           }`}
         >
-          <span className="w-5 text-center text-teal-400">{item.icon}</span>
+          <span className="w-5 shrink-0 text-center text-teal-400">{item.icon}</span>
           {item.label}
         </Link>
       ))}
@@ -64,9 +64,9 @@ function NavFallback({ items }: { items: NavItem[] }) {
         <Link
           key={item.href}
           href={item.href}
-          className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
+          className="flex min-h-11 items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-300 transition-colors hover:bg-slate-800 hover:text-white"
         >
-          <span className="w-5 text-center text-teal-400">{item.icon}</span>
+          <span className="w-5 shrink-0 text-center text-teal-400">{item.icon}</span>
           {item.label}
         </Link>
       ))}
@@ -84,18 +84,34 @@ export function AppShell({ children }: { children: ReactNode }) {
     return true;
   });
 
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [open]);
+
   return (
-    <div className="flex min-h-screen bg-slate-100 text-slate-900">
+    <div className="flex min-h-screen min-w-0 overflow-x-clip bg-slate-100 text-slate-900">
       <aside
-        className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-slate-200 bg-slate-900 text-slate-100 transition-transform lg:static lg:translate-x-0 ${
+        id="app-sidebar"
+        className={`fixed inset-y-0 left-0 z-40 flex w-[min(16rem,85vw)] max-w-full flex-col border-r border-slate-200 bg-slate-900 text-slate-100 transition-transform lg:static lg:w-64 lg:translate-x-0 ${
           open ? "translate-x-0" : "-translate-x-full"
         }`}
+        style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       >
-        <div className="border-b border-slate-700 px-4 py-5">
+        <div className="border-b border-slate-700 px-4 py-5" style={{ paddingTop: "max(1.25rem, env(safe-area-inset-top))" }}>
           <p className="text-lg font-semibold tracking-tight text-teal-400">Hardware POS</p>
           <p className="mt-1 truncate text-xs text-slate-400">{user?.name}</p>
         </div>
-        <nav className="flex-1 space-y-0.5 overflow-y-auto p-2">
+        <nav className="flex-1 space-y-0.5 overflow-y-auto overscroll-contain p-2">
           <Suspense fallback={<NavFallback items={visibleNav} />}>
             <SidebarNav items={visibleNav} onClose={() => setOpen(false)} />
           </Suspense>
@@ -104,7 +120,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <button
             type="button"
             onClick={() => void logout()}
-            className="w-full rounded-lg bg-slate-800 px-3 py-2 text-sm text-slate-200 hover:bg-slate-700"
+            className="min-h-11 w-full rounded-lg bg-slate-800 px-3 py-2 text-sm text-slate-200 hover:bg-slate-700"
           >
             Sign out
           </button>
@@ -120,18 +136,23 @@ export function AppShell({ children }: { children: ReactNode }) {
         />
       ) : null}
 
-      <div className="flex min-h-screen flex-1 flex-col lg:min-w-0">
-        <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-slate-200 bg-white px-4 py-3 shadow-sm lg:hidden">
+      <div className="flex min-h-screen min-w-0 flex-1 flex-col">
+        <header
+          className="sticky top-0 z-20 flex items-center gap-3 border-b border-slate-200 bg-white px-4 py-3 shadow-sm lg:hidden"
+          style={{ paddingTop: "max(0.75rem, env(safe-area-inset-top))" }}
+        >
           <button
             type="button"
-            className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
+            className="min-h-11 rounded-lg border border-slate-200 px-3 py-2 text-sm"
+            aria-expanded={open}
+            aria-controls="app-sidebar"
             onClick={() => setOpen(true)}
           >
             Menu
           </button>
-          <span className="font-semibold text-teal-700">Hardware POS</span>
+          <span className="truncate font-semibold text-teal-700">Hardware POS</span>
         </header>
-        <main className="flex-1 p-4 md:p-6">{children}</main>
+        <main className="min-w-0 flex-1 overflow-x-clip p-3 sm:p-4 md:p-6">{children}</main>
       </div>
     </div>
   );

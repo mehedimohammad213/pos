@@ -138,7 +138,7 @@ function DocumentEditorContent() {
           <Link href="/documents" className="text-xs font-medium text-teal-700 hover:underline">
             ← All documents
           </Link>
-          <h1 className="mt-1 text-2xl font-semibold text-slate-900">Invoice design</h1>
+          <h1 className="mt-1 text-xl font-semibold text-slate-900 sm:text-2xl">Invoice design</h1>
           <p className="text-sm text-slate-500">
             Google Docs–style editor. Insert fields like shop name and items table, then set for print.
           </p>
@@ -190,14 +190,16 @@ function DocumentEditorContent() {
       ) : null}
 
       {showPreview ? (
-        <div className="rounded-xl border border-slate-200 bg-slate-100 p-4">
+        <div className="rounded-xl border border-slate-200 bg-slate-100 p-3 sm:p-4">
           <h2 className="mb-3 text-sm font-semibold text-slate-700">Live preview (sample sale)</h2>
-          <div
-            className={`mx-auto overflow-auto bg-white p-6 shadow ${
-              paper === "pos80" ? "w-[80mm] text-[12px]" : "max-w-[210mm]"
-            }`}
-            dangerouslySetInnerHTML={{ __html: previewHtml }}
-          />
+          <div className="overflow-x-auto">
+            <div
+              className={`mx-auto bg-white p-4 shadow sm:p-6 ${
+                paper === "pos80" ? "w-[80mm] text-[12px]" : "w-[210mm] max-w-[210mm]"
+              }`}
+              dangerouslySetInnerHTML={{ __html: previewHtml }}
+            />
+          </div>
         </div>
       ) : null}
     </div>

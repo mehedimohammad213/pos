@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Mono, Source_Sans_3 } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth";
@@ -19,10 +19,16 @@ export const metadata: Metadata = {
   description: "Point of sale for hardware retail",
 };
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${sourceSans.variable} ${ibmMono.variable} h-full`}>
-      <body className="min-h-full antialiased">
+      <body className="min-h-full min-w-0 antialiased">
         <AuthProvider>{children}</AuthProvider>
       </body>
     </html>

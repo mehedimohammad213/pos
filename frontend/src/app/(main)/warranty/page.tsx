@@ -87,10 +87,10 @@ export default function WarrantyPage() {
       <TableWrap>
         <thead>
           <tr>
-            <Th>Date</Th>
+            <Th className="hidden sm:table-cell">Date</Th>
             <Th>Product</Th>
-            <Th>Serial</Th>
-            <Th>Customer</Th>
+            <Th className="hidden md:table-cell">Serial</Th>
+            <Th className="hidden lg:table-cell">Customer</Th>
             <Th>Status</Th>
             <Th />
           </tr>
@@ -98,10 +98,13 @@ export default function WarrantyPage() {
         <tbody>
           {rows.map((w) => (
             <tr key={w.id}>
-              <Td>{formatDate(w.created_at)}</Td>
-              <Td>{w.product_name}</Td>
-              <Td className="font-mono text-xs">{w.serial_number}</Td>
-              <Td>{w.customer_name}</Td>
+              <Td className="hidden sm:table-cell">{formatDate(w.created_at)}</Td>
+              <Td>
+                <div className="font-medium">{w.product_name}</div>
+                <div className="mt-0.5 font-mono text-[11px] text-slate-500 md:hidden">{w.serial_number}</div>
+              </Td>
+              <Td className="hidden font-mono text-xs md:table-cell">{w.serial_number}</Td>
+              <Td className="hidden lg:table-cell">{w.customer_name}</Td>
               <Td>{w.status}</Td>
               <Td>
                 {w.status !== "resolved" ? (

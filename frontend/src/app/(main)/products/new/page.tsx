@@ -541,7 +541,7 @@ export default function NewProductPage() {
           <h2 className="text-base font-semibold text-slate-900 border-b border-slate-100 pb-2">
             Pricing & Inventory
           </h2>
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <Field label="Retail Price (BDT) *">
               <Input
                 type="number"

@@ -166,20 +166,20 @@ export function InvoicePreview({
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
 
       {showActions ? (
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
-          <div className="flex items-center gap-3">
+        <div className="flex flex-col gap-3 border-b border-slate-100 pb-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+          <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
             <span className="text-sm font-semibold text-slate-800">
               Invoice #{sale.invoice_no || sale.id.slice(0, 8)}
             </span>
-            <div className="flex items-center gap-1.5">
-              <label htmlFor="invoice-format-select" className="text-xs font-medium text-slate-500 whitespace-nowrap">
+            <div className="flex min-w-0 items-center gap-1.5">
+              <label htmlFor="invoice-format-select" className="shrink-0 text-xs font-medium text-slate-500">
                 Type:
               </label>
               <select
                 id="invoice-format-select"
                 value={format}
                 onChange={(e) => setFormat(e.target.value as InvoiceFormat)}
-                className="rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs font-medium text-slate-800 shadow-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
+                className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs font-medium text-slate-800 shadow-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
               >
                 <option value="pos">Built-in POS PDF (80mm)</option>
                 <option value="normal">Built-in A4 PDF</option>
@@ -235,7 +235,7 @@ export function InvoicePreview({
             ref={frameRef}
             title={`Invoice ${sale.invoice_no || ""}`}
             src={isCustom ? url : `${url}#toolbar=0&navpanes=0`}
-            className="h-[520px] w-full bg-white"
+            className="h-[min(520px,70vh)] w-full bg-white"
           />
         </div>
       ) : null}

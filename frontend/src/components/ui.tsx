@@ -4,8 +4,8 @@ import { forwardRef, type ReactNode } from "react";
 
 export function PageHeader({ title, children }: { title: string; children?: ReactNode }) {
   return (
-    <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-      <h1 className="text-2xl font-semibold text-slate-900">{title}</h1>
+    <div className="mb-4 flex flex-wrap items-center justify-between gap-3 sm:mb-6">
+      <h1 className="text-xl font-semibold text-slate-900 sm:text-2xl">{title}</h1>
       {children ? <div className="flex flex-wrap gap-2">{children}</div> : null}
     </div>
   );
@@ -32,7 +32,7 @@ export function Btn({
   return (
     <button
       type="button"
-      className={`inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50 ${styles[variant]} ${className}`}
+      className={`inline-flex min-h-10 items-center justify-center rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50 ${styles[variant]} ${className}`}
       {...props}
     >
       {children}
@@ -47,16 +47,16 @@ export const Input = forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTML
   return (
     <input
       ref={ref}
-      className={`w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-black outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 ${className}`}
+      className={`w-full min-w-0 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-black outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 ${className}`}
       {...props}
     />
   );
 });
 
-export function Select(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
+export function Select({ className = "", ...props }: React.SelectHTMLAttributes<HTMLSelectElement>) {
   return (
     <select
-      className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-teal-500"
+      className={`w-full min-w-0 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-teal-500 ${className}`}
       {...props}
     />
   );
@@ -66,9 +66,9 @@ export function Label({ children }: { children: ReactNode }) {
   return <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500">{children}</label>;
 }
 
-export function Field({ label, children }: { label: string; children: ReactNode }) {
+export function Field({ label, children, className = "" }: { label: string; children: ReactNode; className?: string }) {
   return (
-    <div>
+    <div className={className}>
       <Label>{label}</Label>
       {children}
     </div>
@@ -77,18 +77,22 @@ export function Field({ label, children }: { label: string; children: ReactNode 
 
 export function TableWrap({ children, className = "" }: { children: ReactNode; className?: string }) {
   return (
-    <div className={`overflow-x-auto rounded-xl border border-slate-200 bg-white ${className}`}>
+    <div className={`-mx-1 overflow-x-auto overscroll-x-contain rounded-xl border border-slate-200 bg-white sm:mx-0 ${className}`}>
       <table className="min-w-full text-left text-sm">{children}</table>
     </div>
   );
 }
 
-export function Th({ children }: { children?: ReactNode }) {
-  return <th className="border-b border-slate-200 bg-slate-50 px-4 py-3 font-medium text-slate-600">{children ?? null}</th>;
+export function Th({ children, className = "" }: { children?: ReactNode; className?: string }) {
+  return (
+    <th className={`border-b border-slate-200 bg-slate-50 px-2 py-2.5 font-medium text-slate-600 sm:px-4 sm:py-3 ${className}`}>
+      {children ?? null}
+    </th>
+  );
 }
 
 export function Td({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return <td className={`border-b border-slate-100 px-4 py-3 ${className}`}>{children}</td>;
+  return <td className={`border-b border-slate-100 px-2 py-2.5 sm:px-4 sm:py-3 ${className}`}>{children}</td>;
 }
 
 export function Alert({ children, tone = "error" }: { children: ReactNode; tone?: "error" | "success" | "info" }) {
@@ -115,12 +119,13 @@ export function Modal({
 }) {
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4">
       <button type="button" className="absolute inset-0 bg-black/50" aria-label="Close" onClick={onClose} />
       <div
-        className={`relative max-h-[90vh] overflow-y-auto rounded-xl bg-white p-5 shadow-xl ${
-          wide ? "w-full max-w-3xl" : "w-full max-w-lg"
+        className={`relative max-h-[92vh] w-full overflow-y-auto rounded-t-2xl bg-white p-4 shadow-xl sm:max-h-[90vh] sm:rounded-xl sm:p-5 ${
+          wide ? "sm:max-w-3xl" : "sm:max-w-lg"
         }`}
+        style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}
       >
         <ModalHeader title={title} onClose={onClose} />
         <div className="mt-4">{children}</div>
@@ -132,8 +137,8 @@ export function Modal({
 function ModalHeader({ title, onClose }: { title: string; onClose: () => void }) {
   return (
     <div className="flex items-center justify-between gap-2">
-      <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
-      <button type="button" onClick={onClose} className="rounded p-1 text-slate-500 hover:bg-slate-100">
+      <h2 className="min-w-0 truncate text-lg font-semibold text-slate-900">{title}</h2>
+      <button type="button" onClick={onClose} className="shrink-0 rounded p-2 text-slate-500 hover:bg-slate-100">
         ✕
       </button>
     </div>
@@ -169,11 +174,12 @@ export function Drawer({
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className={`relative flex h-full w-full flex-col bg-white shadow-2xl animate-in slide-in-from-right duration-300 ${
+        className={`relative flex h-full w-full flex-col bg-white shadow-2xl ${
           wide ? "max-w-xl" : "max-w-md"
         }`}
         style={{
           animation: "drawerSlideIn 0.28s ease-out",
+          paddingBottom: "env(safe-area-inset-bottom)",
         }}
       >
         <style>{`
@@ -182,7 +188,7 @@ export function Drawer({
             to { transform: translateX(0); }
           }
         `}</style>
-        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-slate-200 px-5 py-4">
+        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-slate-200 px-4 py-4 sm:px-5">
           <h2 className="truncate text-lg font-semibold text-slate-900">{title}</h2>
           <button
             type="button"
@@ -193,9 +199,9 @@ export function Drawer({
             ✕
           </button>
         </div>
-        <div className="flex-1 overflow-y-auto px-5 py-4">{children}</div>
+        <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-5">{children}</div>
         {footer ? (
-          <div className="shrink-0 border-t border-slate-200 bg-slate-50/80 px-5 py-4">
+          <div className="shrink-0 border-t border-slate-200 bg-slate-50/80 px-4 py-4 sm:px-5">
             {footer}
           </div>
         ) : null}
@@ -244,7 +250,7 @@ export function Pagination({
           type="button"
           disabled={page <= 1}
           onClick={() => onPage(page - 1)}
-          className="rounded px-2 py-1 hover:bg-slate-100 disabled:opacity-40"
+          className="min-h-10 rounded px-2 py-1 hover:bg-slate-100 disabled:opacity-40"
         >
           ‹
         </button>
@@ -258,7 +264,7 @@ export function Pagination({
               key={p}
               type="button"
               onClick={() => onPage(p as number)}
-              className={`min-w-[2rem] rounded px-2 py-1 ${
+              className={`min-h-10 min-w-[2rem] rounded px-2 py-1 ${
                 p === page
                   ? "bg-teal-600 font-semibold text-white"
                   : "hover:bg-slate-100"
@@ -272,7 +278,7 @@ export function Pagination({
           type="button"
           disabled={page >= totalPages}
           onClick={() => onPage(page + 1)}
-          className="rounded px-2 py-1 hover:bg-slate-100 disabled:opacity-40"
+          className="min-h-10 rounded px-2 py-1 hover:bg-slate-100 disabled:opacity-40"
         >
           ›
         </button>

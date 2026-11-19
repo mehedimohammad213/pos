@@ -101,21 +101,24 @@ export default function InstallmentsPage() {
         <thead>
           <tr>
             <Th>Customer</Th>
-            <Th>Due date</Th>
+            <Th className="hidden sm:table-cell">Due date</Th>
             <Th>Amount</Th>
-            <Th>Paid</Th>
-            <Th>Status</Th>
+            <Th className="hidden md:table-cell">Paid</Th>
+            <Th className="hidden sm:table-cell">Status</Th>
             <Th />
           </tr>
         </thead>
         <tbody>
           {overdue.map((d) => (
             <tr key={d.id}>
-              <Td>{d.customer_name}</Td>
-              <Td>{formatDate(d.due_date)}</Td>
+              <Td>
+                {d.customer_name}
+                <span className="mt-0.5 block text-[11px] text-slate-500 sm:hidden">{formatDate(d.due_date)}</span>
+              </Td>
+              <Td className="hidden sm:table-cell">{formatDate(d.due_date)}</Td>
               <Td className="font-mono">{formatBDT(d.amount)}</Td>
-              <Td className="font-mono">{formatBDT(d.paid_amount)}</Td>
-              <Td>{d.status}</Td>
+              <Td className="hidden font-mono md:table-cell">{formatBDT(d.paid_amount)}</Td>
+              <Td className="hidden sm:table-cell">{d.status}</Td>
               <Td>
                 <Btn variant="ghost" className="text-xs" onClick={() => setPayTarget(d)}>
                   Pay

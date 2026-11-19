@@ -127,7 +127,7 @@ export default function DashboardPage() {
         {/* Filter Toolbar */}
         <div className="flex flex-wrap items-center gap-2">
           {/* Preset buttons */}
-          <div className="inline-flex rounded-lg border border-slate-200 bg-white p-1 shadow-xs">
+          <div className="flex max-w-full flex-wrap gap-1 rounded-lg border border-slate-200 bg-white p-1 shadow-xs">
             {(
               [
                 { id: "today", label: "Today" },
@@ -141,7 +141,7 @@ export default function DashboardPage() {
                 key={p.id}
                 type="button"
                 onClick={() => handlePresetChange(p.id)}
-                className={`rounded-md px-3 py-1.5 text-xs font-medium transition ${
+                className={`rounded-md px-2.5 py-1.5 text-xs font-medium transition sm:px-3 ${
                   preset === p.id
                     ? "bg-teal-600 text-white shadow-xs"
                     : "text-slate-600 hover:bg-slate-100"
@@ -154,19 +154,19 @@ export default function DashboardPage() {
 
           {/* Custom Date Pickers */}
           {preset === "custom" && (
-            <div className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1 shadow-xs">
+            <div className="flex w-full flex-wrap items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 shadow-xs sm:w-auto">
               <input
                 type="date"
                 value={from}
                 onChange={(e) => setFrom(e.target.value)}
-                className="rounded border border-slate-300 px-2 py-1 text-xs text-slate-700 outline-none focus:border-teal-500"
+                className="min-w-0 flex-1 rounded border border-slate-300 px-2 py-1 text-xs text-slate-700 outline-none focus:border-teal-500 sm:flex-none"
               />
               <span className="text-xs text-slate-400">to</span>
               <input
                 type="date"
                 value={to}
                 onChange={(e) => setTo(e.target.value)}
-                className="rounded border border-slate-300 px-2 py-1 text-xs text-slate-700 outline-none focus:border-teal-500"
+                className="min-w-0 flex-1 rounded border border-slate-300 px-2 py-1 text-xs text-slate-700 outline-none focus:border-teal-500 sm:flex-none"
               />
             </div>
           )}
@@ -412,11 +412,11 @@ export default function DashboardPage() {
                 <thead>
                   <tr>
                     <Th>Invoice #</Th>
-                    <Th>Customer</Th>
-                    <Th>Date & Time</Th>
+                    <Th className="hidden sm:table-cell">Customer</Th>
+                    <Th className="hidden md:table-cell">Date & Time</Th>
                     <Th>Total</Th>
                     <Th>Status</Th>
-                    <Th>Action</Th>
+                    <Th className="hidden sm:table-cell">Action</Th>
                   </tr>
                 </thead>
                 <tbody>
@@ -427,8 +427,10 @@ export default function DashboardPage() {
                           {sale.invoice_no || "INV"}
                         </Link>
                       </Td>
-                      <Td>{sale.customer_name || <span className="text-slate-400">Walk-in</span>}</Td>
-                      <Td className="text-xs text-slate-500">
+                      <Td className="hidden sm:table-cell">
+                        {sale.customer_name || <span className="text-slate-400">Walk-in</span>}
+                      </Td>
+                      <Td className="hidden text-xs text-slate-500 md:table-cell">
                         {sale.created_at ? formatDateTime(sale.created_at) : formatDate(sale.sale_date)}
                       </Td>
                       <Td className="font-mono font-semibold">{formatBDT(sale.total)}</Td>
@@ -445,7 +447,7 @@ export default function DashboardPage() {
                           {sale.payment_status}
                         </span>
                       </Td>
-                      <Td>
+                      <Td className="hidden sm:table-cell">
                         <Link
                           href={`/sales/${sale.id}`}
                           className="rounded-md border border-slate-200 bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"

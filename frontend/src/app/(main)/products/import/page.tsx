@@ -355,7 +355,7 @@ export default function BulkProductUploadPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 pt-2">
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-4 pt-2">
             <div className="rounded-lg bg-white p-3 border border-teal-100 shadow-sm">
               <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Rows</div>
               <div className="text-xl font-bold text-slate-800">{importResult.total}</div>

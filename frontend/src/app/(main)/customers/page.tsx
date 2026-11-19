@@ -99,22 +99,27 @@ export default function CustomersPage() {
           <thead>
             <tr>
               <Th>Customer</Th>
-              <Th>Phone</Th>
+              <Th className="hidden sm:table-cell">Phone</Th>
               <Th>Total due</Th>
-              <Th>0–30d</Th>
-              <Th>31–60d</Th>
-              <Th>61+d</Th>
+              <Th className="hidden md:table-cell">0–30d</Th>
+              <Th className="hidden md:table-cell">31–60d</Th>
+              <Th className="hidden lg:table-cell">61+d</Th>
             </tr>
           </thead>
           <tbody>
             {aging.map((a) => (
               <tr key={a.id}>
-                <Td>{a.name}</Td>
-                <Td className="font-mono">{a.phone}</Td>
+                <Td>
+                  {a.name}
+                  <span className="mt-0.5 block font-mono text-[11px] text-slate-500 sm:hidden">{a.phone}</span>
+                </Td>
+                <Td className="hidden font-mono sm:table-cell">{a.phone}</Td>
                 <Td className="font-mono">{formatBDT(a.due_balance)}</Td>
-                <Td className="font-mono">{formatBDT(a.d0_30)}</Td>
-                <Td className="font-mono">{formatBDT(a.d31_60)}</Td>
-                <Td className="font-mono">{formatBDT(Number(a.d61_90 || 0) + Number(a.d90_plus || 0))}</Td>
+                <Td className="hidden font-mono md:table-cell">{formatBDT(a.d0_30)}</Td>
+                <Td className="hidden font-mono md:table-cell">{formatBDT(a.d31_60)}</Td>
+                <Td className="hidden font-mono lg:table-cell">
+                  {formatBDT(Number(a.d61_90 || 0) + Number(a.d90_plus || 0))}
+                </Td>
               </tr>
             ))}
           </tbody>

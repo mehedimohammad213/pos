@@ -53,8 +53,8 @@ export default function SalesPage() {
         <thead>
           <tr>
             <Th>Invoice</Th>
-            <Th>Date</Th>
-            <Th>Customer</Th>
+            <Th className="hidden sm:table-cell">Date</Th>
+            <Th className="hidden md:table-cell">Customer</Th>
             <Th>Total</Th>
             <Th>Status</Th>
             <Th />
@@ -63,9 +63,14 @@ export default function SalesPage() {
         <tbody>
           {rows.map((s) => (
             <tr key={s.id}>
-              <Td className="font-mono">{s.invoice_no || s.id.slice(0, 8)}</Td>
-              <Td>{formatDate(s.sale_date)}</Td>
-              <Td>{s.customer_name || "—"}</Td>
+              <Td className="font-mono">
+                <Link href={`/sales/${s.id}`} className="text-teal-700 hover:underline">
+                  {s.invoice_no || s.id.slice(0, 8)}
+                </Link>
+                <span className="mt-0.5 block text-[11px] text-slate-500 sm:hidden">{formatDate(s.sale_date)}</span>
+              </Td>
+              <Td className="hidden sm:table-cell">{formatDate(s.sale_date)}</Td>
+              <Td className="hidden md:table-cell">{s.customer_name || "—"}</Td>
               <Td className="font-mono">{formatBDT(s.total)}</Td>
               <Td>{s.status}</Td>
               <Td>

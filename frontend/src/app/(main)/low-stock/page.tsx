@@ -61,8 +61,8 @@ export default function LowStockPage() {
           <tr>
             <Th>Product</Th>
             <Th>On hand</Th>
-            <Th>Reorder</Th>
-            <Th>Last cost</Th>
+            <Th className="hidden sm:table-cell">Reorder</Th>
+            <Th className="hidden md:table-cell">Last cost</Th>
             <Th>Order qty</Th>
           </tr>
         </thead>
@@ -74,8 +74,8 @@ export default function LowStockPage() {
                 <div className="font-mono text-xs text-slate-500">{p.sku}</div>
               </Td>
               <Td className="font-mono">{Number(p.current_qty)}</Td>
-              <Td className="font-mono">{Number(p.reorder_level)}</Td>
-              <Td className="font-mono">{formatBDT(p.last_cost)}</Td>
+              <Td className="hidden font-mono sm:table-cell">{Number(p.reorder_level)}</Td>
+              <Td className="hidden font-mono md:table-cell">{formatBDT(p.last_cost)}</Td>
               <Td>
                 <input
                   type="number"

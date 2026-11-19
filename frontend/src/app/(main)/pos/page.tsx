@@ -44,6 +44,7 @@ export default function PosPage() {
   const [success, setSuccess] = useState("");
   const [shop, setShop] = useState<ShopSettings | null>(null);
   const [receipt, setReceipt] = useState<Sale | null>(null);
+  const [mobilePane, setMobilePane] = useState<"products" | "cart">("products");
   const barcodeRef = useRef<HTMLInputElement>(null);
 
   const subtotal = cart.reduce((s, l) => s + l.unit_price * l.quantity - l.discount_amount, 0);
@@ -234,13 +235,14 @@ export default function PosPage() {
         serial_ids: serialModal.picked,
       },
     ]);
+    setMobilePane("cart");
     setSerialModal(null);
   }
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold text-slate-900">Point of Sale</h1>
+        <h1 className="text-xl font-semibold text-slate-900 sm:text-2xl">Point of Sale</h1>
         <div className="flex flex-wrap gap-2">
           <Btn variant="secondary" onClick={() => setScanOpen(true)}>
             Camera scan
@@ -268,39 +270,71 @@ export default function PosPage() {
         setQ={setQ}
       />
 
+      <div className="grid grid-cols-2 gap-2 rounded-xl border border-slate-200 bg-white p-1 lg:hidden">
+        <button
+          type="button"
+          onClick={() => setMobilePane("products")}
+          className={`rounded-lg px-3 py-2.5 text-sm font-medium transition ${
+            mobilePane === "products" ? "bg-teal-600 text-white" : "text-slate-600 hover:bg-slate-50"
+          }`}
+        >
+          Products
+        </button>
+        <button
+          type="button"
+          onClick={() => setMobilePane("cart")}
+          className={`rounded-lg px-3 py-2.5 text-sm font-medium transition ${
+            mobilePane === "cart" ? "bg-teal-600 text-white" : "text-slate-600 hover:bg-slate-50"
+          }`}
+        >
+          Cart{cart.length ? ` (${cart.length})` : ""}
+        </button>
+      </div>
+
       <div className="grid gap-4 lg:grid-cols-5">
-        <PosProductGrid products={products} addProduct={addProduct} saleType={saleType} />
-        <PosCartPanel
-          cart={cart}
-          setCart={setCart}
-          subtotal={subtotal}
-          discount={discount}
-          setDiscount={discountAmt}
-          discountInput={discount}
-          setDiscountInput={setDiscount}
-          total={total}
-          customerQ={customerQ}
-          setCustomerQ={setCustomerQ}
-          searchCustomer={searchCustomer}
-          customer={customer}
-          setCustomer={setCustomer}
-          customerNotFound={customerNotFound}
-          setCustomerNotFound={setCustomerNotFound}
-          customerSearching={customerSearching}
-          onOpenAddCustomer={openAddCustomer}
-          payments={payments}
-          setPayments={setPayments}
-          paidTotal={paidTotal}
-          useInstallment={useInstallment}
-          setUseInstallment={setUseInstallment}
-          installment={installment}
-          setInstallment={setInstallment}
-          notes={notes}
-          setNotes={setNotes}
-          completeSale={completeSale}
-          held={held}
-          recall={recall}
-        />
+        <div className={`lg:col-span-2 ${mobilePane === "products" ? "block" : "hidden lg:block"}`}>
+          <PosProductGrid
+            products={products}
+            addProduct={async (p) => {
+              await addProduct(p);
+              if (!p.serial_required) setMobilePane("cart");
+            }}
+            saleType={saleType}
+          />
+        </div>
+        <div className={`lg:col-span-3 ${mobilePane === "cart" ? "block" : "hidden lg:block"}`}>
+          <PosCartPanel
+            cart={cart}
+            setCart={setCart}
+            subtotal={subtotal}
+            discount={discount}
+            setDiscount={discountAmt}
+            discountInput={discount}
+            setDiscountInput={setDiscount}
+            total={total}
+            customerQ={customerQ}
+            setCustomerQ={setCustomerQ}
+            searchCustomer={searchCustomer}
+            customer={customer}
+            setCustomer={setCustomer}
+            customerNotFound={customerNotFound}
+            setCustomerNotFound={setCustomerNotFound}
+            customerSearching={customerSearching}
+            onOpenAddCustomer={openAddCustomer}
+            payments={payments}
+            setPayments={setPayments}
+            paidTotal={paidTotal}
+            useInstallment={useInstallment}
+            setUseInstallment={setUseInstallment}
+            installment={installment}
+            setInstallment={setInstallment}
+            notes={notes}
+            setNotes={setNotes}
+            completeSale={completeSale}
+            held={held}
+            recall={recall}
+          />
+        </div>
       </div>
 
       <Modal open={addCustomerOpen} onClose={() => setAddCustomerOpen(false)} title="New customer">
@@ -412,7 +446,7 @@ function PosTopBar(props: {
   setQ: (v: string) => void;
 }) {
   return (
-    <div className="grid gap-3 md:grid-cols-4">
+    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
       <Field label="Sale type">
         <Select
           value={props.saleType}
@@ -428,19 +462,19 @@ function PosTopBar(props: {
           <Input type="date" value={props.saleDate} onChange={(e) => props.setSaleDate(e.target.value)} />
         </Field>
       ) : null}
-      <Field label="Barcode (USB wedge)">
+      <Field label="Barcode (USB wedge)" className="sm:col-span-2 lg:col-span-1">
         <form onSubmit={props.onBarcodeSubmit}>
           <Input
             ref={props.barcodeRef}
             value={props.barcode}
             onChange={(e) => props.setBarcode(e.target.value)}
             placeholder="Scan or type…"
-            className="text-lg"
+            className="text-base sm:text-lg"
           />
         </form>
       </Field>
-      <Field label="Search products">
-        <Input value={props.q} onChange={(e) => props.setQ(e.target.value)} placeholder="Name, SKU…" className="text-lg" />
+      <Field label="Search products" className="sm:col-span-2 lg:col-span-1">
+        <Input value={props.q} onChange={(e) => props.setQ(e.target.value)} placeholder="Name, SKU…" className="text-base sm:text-lg" />
       </Field>
     </div>
   );
@@ -456,17 +490,17 @@ function PosProductGrid({
   saleType: string;
 }) {
   return (
-    <div className="lg:col-span-2">
-      <div className="grid max-h-[420px] gap-2 overflow-y-auto sm:grid-cols-2">
+    <div>
+      <div className="grid max-h-[min(60vh,520px)] gap-2 overflow-y-auto sm:grid-cols-2 lg:max-h-[420px]">
         {products.map((p) => (
           <button
             key={p.id}
             type="button"
             onClick={() => void addProduct(p)}
-            className="rounded-xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:border-teal-400 active:scale-[0.98]"
+            className="rounded-xl border border-slate-200 bg-white p-3 text-left shadow-sm transition hover:border-teal-400 active:scale-[0.98] sm:p-4"
           >
-            <p className="font-medium">{p.name}</p>
-            <p className="font-mono text-lg text-teal-700">
+            <p className="font-medium leading-snug">{p.name}</p>
+            <p className="font-mono text-base text-teal-700 sm:text-lg">
               {formatBDT(saleType === "wholesale" ? p.wholesale_price ?? p.retail_price : p.retail_price)}
             </p>
             <p className="text-xs text-slate-500">Stock: {Number(p.stock_qty ?? 0)}</p>
@@ -509,18 +543,18 @@ function PosCartPanel(props: {
   recall: (id: string) => void;
 }) {
   return (
-    <div className="lg:col-span-3 space-y-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+    <div className="space-y-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm sm:p-4">
       <h2 className="font-semibold">Cart</h2>
-      <ul className="max-h-48 space-y-2 overflow-y-auto">
+      <ul className="max-h-56 space-y-2 overflow-y-auto sm:max-h-48">
         {props.cart.map((line, i) => (
           <li key={`${line.product.id}-${i}`} className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2">
-            <div>
-              <p className="font-medium">{line.product.name}</p>
+            <div className="min-w-0 flex-1">
+              <p className="truncate font-medium">{line.product.name}</p>
               {line.serial_ids.length ? (
                 <p className="text-xs text-slate-500">{line.serial_ids.length} serial(s)</p>
               ) : null}
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex shrink-0 items-center gap-2">
               <Input
                 type="number"
                 min={1}
@@ -532,8 +566,8 @@ function PosCartPanel(props: {
                   props.setCart(next);
                 }}
               />
-              <span className="font-mono">{formatBDT(line.unit_price * line.quantity)}</span>
-              <Btn variant="ghost" className="text-red-600" onClick={() => props.setCart(props.cart.filter((_, j) => j !== i))}>
+              <span className="min-w-[4.5rem] text-right font-mono text-sm">{formatBDT(line.unit_price * line.quantity)}</span>
+              <Btn variant="ghost" className="px-2 text-red-600" onClick={() => props.setCart(props.cart.filter((_, j) => j !== i))}>
                 ✕
               </Btn>
             </div>
@@ -571,7 +605,7 @@ function PosCartPanel(props: {
           </div>
         ) : (
           <div className="space-y-2">
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
               <Input
                 placeholder="Customer phone"
                 value={props.customerQ}
@@ -585,14 +619,16 @@ function PosCartPanel(props: {
                     void props.searchCustomer();
                   }
                 }}
-                className="max-w-xs"
+                className="w-full sm:max-w-xs"
               />
-              <Btn variant="secondary" onClick={() => void props.searchCustomer()} disabled={props.customerSearching}>
-                {props.customerSearching ? "Searching…" : "Find customer"}
-              </Btn>
-              <Btn variant="secondary" onClick={props.onOpenAddCustomer}>
-                + Add customer
-              </Btn>
+              <div className="flex flex-wrap gap-2">
+                <Btn variant="secondary" onClick={() => void props.searchCustomer()} disabled={props.customerSearching}>
+                  {props.customerSearching ? "Searching…" : "Find customer"}
+                </Btn>
+                <Btn variant="secondary" onClick={props.onOpenAddCustomer}>
+                  + Add customer
+                </Btn>
+              </div>
             </div>
 
             {props.customerNotFound ? (
@@ -638,7 +674,7 @@ function InstallmentFields({
   setInstallment: (v: { down: string; months: string }) => void;
 }) {
   return (
-    <div className="grid grid-cols-2 gap-2">
+    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
       <Field label="Down payment">
         <Input value={installment.down} onChange={(e) => setInstallment({ ...installment, down: e.target.value })} />
       </Field>
@@ -663,7 +699,7 @@ function PaymentFields({
   return (
     <div className="space-y-2">
       {payments.map((p, i) => (
-        <div key={i} className="grid grid-cols-3 gap-2">
+        <div key={i} className="grid grid-cols-1 gap-2 sm:grid-cols-3">
           <Select
             value={p.method}
             onChange={(e) => {
@@ -711,11 +747,11 @@ function PaymentFields({
 
 function CartActions({ completeSale }: { completeSale: (hold?: boolean) => void }) {
   return (
-    <div className="grid grid-cols-2 gap-3 pt-2">
-      <Btn className="py-4 text-lg" onClick={() => void completeSale(false)}>
+    <div className="grid grid-cols-1 gap-3 pt-2 sm:grid-cols-2">
+      <Btn className="min-h-12 py-3 text-base sm:py-4 sm:text-lg" onClick={() => void completeSale(false)}>
         Pay & complete
       </Btn>
-      <Btn variant="secondary" className="py-4 text-lg" onClick={() => void completeSale(true)}>
+      <Btn variant="secondary" className="min-h-12 py-3 text-base sm:py-4 sm:text-lg" onClick={() => void completeSale(true)}>
         Hold sale
       </Btn>
     </div>

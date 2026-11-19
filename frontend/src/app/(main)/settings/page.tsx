@@ -111,8 +111,8 @@ export default function SettingsPage() {
               onChange={(e) => setShop({ ...shop, default_tax_percent: e.target.value })}
             />
           </Field>
-          <Field label="Address">
-            <Input value={shop.address || ""} onChange={(e) => setShop({ ...shop, address: e.target.value })} className="sm:col-span-2" />
+          <Field label="Address" className="sm:col-span-2">
+            <Input value={shop.address || ""} onChange={(e) => setShop({ ...shop, address: e.target.value })} />
           </Field>
         </div>
         <Btn className="mt-4" onClick={() => void saveShop()}>

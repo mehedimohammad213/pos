@@ -242,11 +242,11 @@ export default function ProductsPage() {
               />
             </Th>
             <Th>Name</Th>
-            <Th>SKU</Th>
-            <Th>Barcode</Th>
+            <Th className="hidden md:table-cell">SKU</Th>
+            <Th className="hidden lg:table-cell">Barcode</Th>
             <Th>Stock</Th>
             <Th>Retail</Th>
-            {canSeeCost ? <Th>Cost</Th> : null}
+            {canSeeCost ? <Th className="hidden sm:table-cell">Cost</Th> : null}
             <Th />
           </tr>
         </thead>
@@ -261,27 +261,30 @@ export default function ProductsPage() {
                   onChange={() => toggleOne(p.id)}
                 />
               </Td>
-              <Td>{p.name}</Td>
-              <Td className="font-mono text-xs">{p.sku}</Td>
-              <Td className="font-mono text-xs">{p.barcode || "—"}</Td>
+              <Td>
+                <span className="font-medium">{p.name}</span>
+                <span className="mt-0.5 block font-mono text-[11px] text-slate-500 md:hidden">{p.sku}</span>
+              </Td>
+              <Td className="hidden font-mono text-xs md:table-cell">{p.sku}</Td>
+              <Td className="hidden font-mono text-xs lg:table-cell">{p.barcode || "—"}</Td>
               <Td className="font-mono">{Number(p.stock_qty ?? 0)}</Td>
               <Td className="font-mono">{formatBDT(p.retail_price)}</Td>
-              {canSeeCost ? <Td className="font-mono">{formatBDT(p.cost)}</Td> : null}
+              {canSeeCost ? <Td className="hidden font-mono sm:table-cell">{formatBDT(p.cost)}</Td> : null}
               <Td>
-                <div className="flex gap-1">
-                  <Btn variant="ghost" className="px-2 py-1 text-xs" onClick={() => startEdit(p)}>
+                <div className="flex flex-wrap gap-1">
+                  <Btn variant="ghost" className="min-h-9 px-2 py-1 text-xs" onClick={() => startEdit(p)}>
                     Edit
                   </Btn>
                   <Btn
                     variant="ghost"
-                    className="px-2 py-1 text-xs"
+                    className="min-h-9 px-2 py-1 text-xs"
                     onClick={() => setAdjust({ id: p.id, qty: "0", note: "" })}
                   >
                     Stock
                   </Btn>
                   <Btn
                     variant="ghost"
-                    className="px-2 py-1 text-xs"
+                    className="min-h-9 px-2 py-1 text-xs"
                     onClick={() => {
                       setPrintLabels(null);
                       setLabel(p);

@@ -90,7 +90,7 @@ export default function ExpensesPage() {
             <Th>Date</Th>
             <Th>Category</Th>
             <Th>Amount</Th>
-            <Th>Note</Th>
+            <Th className="hidden sm:table-cell">Note</Th>
           </tr>
         </thead>
         <tbody>
@@ -99,7 +99,7 @@ export default function ExpensesPage() {
               <Td>{formatDate(e.expense_date)}</Td>
               <Td>{e.category_name || "—"}</Td>
               <Td className="font-mono">{formatBDT(e.amount)}</Td>
-              <Td>{e.note}</Td>
+              <Td className="hidden sm:table-cell">{e.note}</Td>
             </tr>
           ))}
         </tbody>

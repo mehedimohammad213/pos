@@ -276,7 +276,7 @@ export default function PurchasesPage() {
         </div>
         <div className="mt-4 space-y-2">
           {purForm.lines.map((line, i) => (
-            <div key={i} className="grid grid-cols-3 gap-2">
+            <div key={i} className="grid grid-cols-1 gap-2 sm:grid-cols-3">
               <Select
                 value={line.product_id}
                 onChange={(e) => {

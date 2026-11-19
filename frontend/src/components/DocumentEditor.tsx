@@ -331,7 +331,8 @@ export function DocumentEditor({
   return (
     <div className="overflow-hidden rounded-xl border border-slate-200 bg-slate-100 shadow-sm">
       {editor ? <EditorToolbar editor={editor} /> : null}
-      <div className="max-h-[72vh] overflow-auto bg-[#e8eaed] px-4 py-6">
+      <div className="max-h-[min(72vh,100dvh-12rem)] overflow-auto overscroll-contain bg-[#e8eaed] px-2 py-4 sm:px-4 sm:py-6">
+        <p className="mb-3 text-center text-xs text-slate-500 sm:hidden">Swipe sideways to scroll the full page</p>
         <div
           className={`mx-auto bg-white shadow-[0_1px_3px_rgba(60,64,67,.3),0_4px_8px_3px_rgba(60,64,67,.15)] ${sheetClass}`}
         >

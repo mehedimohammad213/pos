@@ -92,8 +92,8 @@ export default function DocumentsPage() {
           <tr>
             <Th>Name</Th>
             <Th>Paper</Th>
-            <Th>Default</Th>
-            <Th>Updated</Th>
+            <Th className="hidden sm:table-cell">Default</Th>
+            <Th className="hidden md:table-cell">Updated</Th>
             <Th>Actions</Th>
           </tr>
         </thead>
@@ -104,10 +104,21 @@ export default function DocumentsPage() {
                 <Link href={`/documents/${t.id}`} className="font-medium text-teal-700 hover:underline">
                   {t.name}
                 </Link>
+                {t.is_default ? (
+                  <span className="mt-1 inline-block rounded bg-teal-50 px-2 py-0.5 text-xs font-medium text-teal-700 sm:hidden">
+                    Default
+                  </span>
+                ) : null}
               </Td>
               <Td>{t.paper === "a4" ? "A4" : "POS 80mm"}</Td>
-              <Td>{t.is_default ? <span className="rounded bg-teal-50 px-2 py-0.5 text-xs font-medium text-teal-700">Default</span> : "—"}</Td>
-              <Td>{formatDateTime(t.updated_at)}</Td>
+              <Td className="hidden sm:table-cell">
+                {t.is_default ? (
+                  <span className="rounded bg-teal-50 px-2 py-0.5 text-xs font-medium text-teal-700">Default</span>
+                ) : (
+                  "—"
+                )}
+              </Td>
+              <Td className="hidden md:table-cell">{formatDateTime(t.updated_at)}</Td>
               <Td>
                 <div className="flex flex-wrap gap-2">
                   <Link href={`/documents/${t.id}`}>
