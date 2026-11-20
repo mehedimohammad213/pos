@@ -72,10 +72,12 @@ function DemandDetailContent() {
 
   if (!demand) return <p className="text-slate-500">Loading…</p>;
 
+  const canConvert = !["received", "cancelled"].includes(demand.status);
+
   return (
     <div>
       <PageHeader title={`Demand ${demand.demand_no || id.slice(0, 8)}`}>
-        <Btn onClick={() => setConvertOpen(true)}>Convert to purchase</Btn>
+        {canConvert ? <Btn onClick={() => setConvertOpen(true)}>Convert to purchase</Btn> : null}
       </PageHeader>
       {msg ? <Alert tone="success">{msg}</Alert> : null}
       {error ? <Alert tone="error">{error}</Alert> : null}

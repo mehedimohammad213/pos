@@ -149,6 +149,8 @@ export type PurchaseDemand = {
   notes?: string;
   supplier_name?: string;
   preferred_supplier_id?: string;
+  product_names?: string;
+  item_count?: number;
   items?: {
     product_id: string;
     product_name?: string;

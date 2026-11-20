@@ -62,6 +62,7 @@ router.get('/demands', authRequired, async (req, res, next) => {
     res.json(await purchase.listDemands(req.query.status as string | undefined, {
       page: page !== undefined || paginate ? (page || 1) : undefined,
       limit: limit !== undefined || paginate ? (limit || 20) : undefined,
+      q: req.query.q as string | undefined,
     }));
   } catch (e) {
     next(e);

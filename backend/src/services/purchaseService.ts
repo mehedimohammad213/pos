@@ -64,14 +64,40 @@ export async function updateSupplier(id: string, input: Record<string, unknown>)
   return assertFound(r.rows[0]);
 }
 
-export async function listDemands(status?: string, params?: { page?: number; limit?: number }) {
+export async function listDemands(
+  status?: string,
+  params?: { page?: number; limit?: number; q?: string }
+) {
   const values: unknown[] = [];
-  let where = '1=1';
+  const whereParts = ['1=1'];
   let i = 1;
   if (status) {
-    where = `d.status = $${i++}`;
+    whereParts.push(`d.status = $${i++}`);
     values.push(status);
   }
+  const q = params?.q?.trim();
+  if (q) {
+    whereParts.push(
+      `(d.demand_no ILIKE $${i}
+        OR d.status ILIKE $${i}
+        OR COALESCE(d.notes, '') ILIKE $${i}
+        OR COALESCE(s.name, '') ILIKE $${i}
+        OR d.id::text ILIKE $${i}
+        OR EXISTS (
+          SELECT 1
+          FROM purchase_demand_items di
+          JOIN products p ON p.id = di.product_id
+          WHERE di.demand_id = d.id
+            AND (p.name ILIKE $${i} OR COALESCE(p.sku, '') ILIKE $${i} OR COALESCE(p.barcode, '') ILIKE $${i})
+        ))`
+    );
+    values.push(`%${q}%`);
+    i++;
+  }
+  const where = whereParts.join(' AND ');
+  const fromSql = `purchase_demands d
+     LEFT JOIN suppliers s ON s.id = d.preferred_supplier_id
+     LEFT JOIN users u ON u.id = d.created_by`;
 
   const isPaginated = params?.page !== undefined || params?.limit !== undefined;
   if (isPaginated) {
@@ -80,17 +106,26 @@ export async function listDemands(status?: string, params?: { page?: number; lim
     const offset = (page - 1) * limit;
 
     const countRes = await query(
-      `SELECT COUNT(*)::int AS total FROM purchase_demands d WHERE ${where}`,
+      `SELECT COUNT(*)::int AS total FROM ${fromSql} WHERE ${where}`,
       values
     );
     const total = Number(countRes.rows[0]?.total || 0);
 
     const dataValues = [...values, limit, offset];
     const r = await query(
-      `SELECT d.*, s.name AS supplier_name, u.name AS created_by_name
-       FROM purchase_demands d
-       LEFT JOIN suppliers s ON s.id = d.preferred_supplier_id
-       LEFT JOIN users u ON u.id = d.created_by
+      `SELECT d.*, s.name AS supplier_name, u.name AS created_by_name,
+              (
+                SELECT string_agg(p.name, ', ' ORDER BY p.name)
+                FROM purchase_demand_items di
+                JOIN products p ON p.id = di.product_id
+                WHERE di.demand_id = d.id
+              ) AS product_names,
+              (
+                SELECT COUNT(*)::int
+                FROM purchase_demand_items di
+                WHERE di.demand_id = d.id
+              ) AS item_count
+       FROM ${fromSql}
        WHERE ${where}
        ORDER BY d.created_at DESC
        LIMIT $${i++} OFFSET $${i++}`,
@@ -100,10 +135,19 @@ export async function listDemands(status?: string, params?: { page?: number; lim
   }
 
   const r = await query(
-    `SELECT d.*, s.name AS supplier_name, u.name AS created_by_name
-     FROM purchase_demands d
-     LEFT JOIN suppliers s ON s.id = d.preferred_supplier_id
-     LEFT JOIN users u ON u.id = d.created_by
+    `SELECT d.*, s.name AS supplier_name, u.name AS created_by_name,
+            (
+              SELECT string_agg(p.name, ', ' ORDER BY p.name)
+              FROM purchase_demand_items di
+              JOIN products p ON p.id = di.product_id
+              WHERE di.demand_id = d.id
+            ) AS product_names,
+            (
+              SELECT COUNT(*)::int
+              FROM purchase_demand_items di
+              WHERE di.demand_id = d.id
+            ) AS item_count
+     FROM ${fromSql}
      WHERE ${where}
      ORDER BY d.created_at DESC`,
     values
