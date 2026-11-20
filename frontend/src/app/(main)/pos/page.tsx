@@ -50,6 +50,8 @@ export default function PosPage() {
   const [receipt, setReceipt] = useState<Sale | null>(null);
   const [mobilePane, setMobilePane] = useState<"products" | "cart">("products");
   const searchRef = useRef<HTMLInputElement>(null);
+  const pendingCompleteMsgRef = useRef("");
+  const successClearTimerRef = useRef<number | null>(null);
   const modalOpen = scanOpen || !!serialModal || !!receipt || addCustomerOpen || !!cancelHoldTarget;
 
   const subtotal = cart.reduce((s, l) => s + l.unit_price * l.quantity - l.discount_amount, 0);
@@ -88,6 +90,11 @@ export default function PosPage() {
       setActiveHoldId(null);
       setCancelHoldTarget(null);
       setCancelHoldBusy(false);
+      pendingCompleteMsgRef.current = "";
+      if (successClearTimerRef.current != null) {
+        window.clearTimeout(successClearTimerRef.current);
+        successClearTimerRef.current = null;
+      }
       setMobilePane("products");
       prevTotalRef.current = 0;
     };
@@ -138,6 +145,30 @@ export default function PosPage() {
     const rows = await api<Product[]>(`/catalog/products?${qs}`);
     setProducts(rows.slice(0, 30));
   }, []);
+
+  function clearSuccessSoon() {
+    if (successClearTimerRef.current != null) {
+      window.clearTimeout(successClearTimerRef.current);
+    }
+    successClearTimerRef.current = window.setTimeout(() => {
+      setSuccess("");
+      successClearTimerRef.current = null;
+      void loadProducts(q);
+      searchRef.current?.focus();
+    }, 2000);
+  }
+
+  function closeReceipt() {
+    setReceipt(null);
+    const msg = pendingCompleteMsgRef.current;
+    pendingCompleteMsgRef.current = "";
+    if (msg) {
+      setSuccess(msg);
+      clearSuccessSoon();
+    } else {
+      window.setTimeout(() => searchRef.current?.focus(), 0);
+    }
+  }
 
   useEffect(() => {
     const t = setTimeout(() => void loadProducts(q), 250);
@@ -348,8 +379,13 @@ export default function PosPage() {
         }
         setActiveHoldId(null);
       }
-      setSuccess(hold ? `Held as ${sale.invoice_no || sale.id}` : `Sale ${sale.invoice_no || sale.id} complete`);
-      if (!hold) {
+      if (hold) {
+        setSuccess(`Held as ${sale.invoice_no || sale.id}`);
+        clearSuccessSoon();
+      } else {
+        // Open invoice first; show complete message only after the invoice is closed.
+        pendingCompleteMsgRef.current = `Sale ${sale.invoice_no || sale.id} complete`;
+        setSuccess("");
         setReceipt(sale);
         // Stock is reduced only on completed sales (not holds) — update product cards immediately.
         setProducts((prev) =>
@@ -363,6 +399,7 @@ export default function PosPage() {
       }
       setCart([]);
       setDiscount("");
+      setNotes("");
       setCustomer(null);
       setCustomerQ("");
       setCustomerNotFound(false);
@@ -646,8 +683,8 @@ export default function PosPage() {
         </form>
       </Modal>
 
-      <Modal open={!!receipt} onClose={() => setReceipt(null)} title="Invoice" wide>
-        {receipt ? <InvoicePreview sale={receipt} shop={shop} onClose={() => setReceipt(null)} /> : null}
+      <Modal open={!!receipt} onClose={closeReceipt} title="Invoice" wide>
+        {receipt ? <InvoicePreview sale={receipt} shop={shop} onClose={closeReceipt} /> : null}
       </Modal>
 
       <Modal open={scanOpen} onClose={() => setScanOpen(false)} title="Camera barcode scan" wide>
