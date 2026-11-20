@@ -91,8 +91,20 @@ export function Th({ children, className = "" }: { children?: ReactNode; classNa
   );
 }
 
-export function Td({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return <td className={`border-b border-slate-100 px-2 py-2.5 sm:px-4 sm:py-3 ${className}`}>{children}</td>;
+export function Td({
+  children,
+  className = "",
+  colSpan,
+}: {
+  children: ReactNode;
+  className?: string;
+  colSpan?: number;
+}) {
+  return (
+    <td colSpan={colSpan} className={`border-b border-slate-100 px-2 py-2.5 sm:px-4 sm:py-3 ${className}`}>
+      {children}
+    </td>
+  );
 }
 
 export function Alert({ children, tone = "error" }: { children: ReactNode; tone?: "error" | "success" | "info" }) {

@@ -34,7 +34,9 @@ const ROLE_DEFAULTS: Record<string, PermissionKey[]> = {
 
 function overridesFromUser(u: UserRow): Record<string, boolean> {
   const raw = u.permissions;
-  if (raw && !Array.isArray(raw) && typeof raw === "object") return { ...raw };
+  if (raw && !Array.isArray(raw) && typeof raw === "object") {
+    return { ...(raw as Record<string, boolean>) };
+  }
   return {};
 }
 
