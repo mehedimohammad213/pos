@@ -16,6 +16,9 @@ export default function SerialsPage() {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ product_id: "", serial_numbers: "" });
   const [error, setError] = useState("");
+  const [savingId, setSavingId] = useState<string | null>(null);
+
+  const SERIAL_STATUSES = ["in_stock", "sold", "returned", "defective"] as const;
 
   async function load(p = page) {
     const qs = new URLSearchParams({
@@ -27,6 +30,24 @@ export default function SerialsPage() {
     setTotal(data.total);
     setTotalPages(data.totalPages);
     setPage(data.page);
+  }
+
+  async function changeStatus(id: string, status: (typeof SERIAL_STATUSES)[number]) {
+    setError("");
+    setSavingId(id);
+    const prev = rows.find((r) => r.id === id)?.status;
+    setRows((list) => list.map((r) => (r.id === id ? { ...r, status } : r)));
+    try {
+      await api(`/catalog/serials/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ status }),
+      });
+    } catch (e) {
+      setRows((list) => list.map((r) => (r.id === id ? { ...r, status: prev || r.status } : r)));
+      setError(e instanceof Error ? e.message : "Failed to update status");
+    } finally {
+      setSavingId(null);
+    }
   }
 
   async function loadProductsList() {
@@ -91,7 +112,22 @@ export default function SerialsPage() {
             <tr key={s.id}>
               <Td className="font-mono">{s.serial_number}</Td>
               <Td>{s.product_name}</Td>
-              <Td>{s.status}</Td>
+              <Td>
+                <select
+                  className="rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-800 focus:border-teal-500 focus:outline-none disabled:opacity-60"
+                  value={s.status}
+                  disabled={savingId === s.id}
+                  onChange={(e) =>
+                    void changeStatus(s.id, e.target.value as (typeof SERIAL_STATUSES)[number])
+                  }
+                >
+                  {SERIAL_STATUSES.map((st) => (
+                    <option key={st} value={st}>
+                      {st}
+                    </option>
+                  ))}
+                </select>
+              </Td>
             </tr>
           ))}
         </tbody>

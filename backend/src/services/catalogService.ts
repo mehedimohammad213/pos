@@ -678,6 +678,56 @@ export async function addSerials(
   return withTransaction(run);
 }
 
+const SERIAL_STATUSES = ['in_stock', 'sold', 'returned', 'defective'] as const;
+export type SerialStatus = (typeof SERIAL_STATUSES)[number];
+
+export async function updateSerialStatus(id: string, status: SerialStatus, userId?: string) {
+  if (!SERIAL_STATUSES.includes(status)) {
+    throw new AppError('Invalid serial status', 400);
+  }
+
+  return withTransaction(async (c) => {
+    const existing = await c.query(`SELECT * FROM serials WHERE id = $1 FOR UPDATE`, [id]);
+    const serial = assertFound(existing.rows[0], 'Serial');
+    const prev = serial.status as SerialStatus;
+    if (prev === status) return serial;
+
+    const wasAvailable = prev === 'in_stock';
+    const willBeAvailable = status === 'in_stock';
+
+    const r = await c.query(
+      `UPDATE serials SET
+         status = $2,
+         sale_item_id = CASE WHEN $2 = 'sold' THEN sale_item_id ELSE NULL END,
+         warranty_expires_at = CASE WHEN $2 = 'in_stock' THEN NULL ELSE warranty_expires_at END,
+         updated_at = NOW()
+       WHERE id = $1
+       RETURNING *`,
+      [id, status]
+    );
+
+    if (wasAvailable && !willBeAvailable) {
+      await c.query(
+        `UPDATE product_stock SET quantity = GREATEST(quantity - 1, 0), updated_at = NOW() WHERE product_id = $1`,
+        [serial.product_id]
+      );
+    } else if (!wasAvailable && willBeAvailable) {
+      await c.query(
+        `INSERT INTO product_stock (product_id, quantity)
+         VALUES ($1, 1)
+         ON CONFLICT (product_id) DO UPDATE
+         SET quantity = product_stock.quantity + 1, updated_at = NOW()`,
+        [serial.product_id]
+      );
+    }
+
+    if (userId) {
+      await writeAudit(userId, 'serial.status', 'serial', id, { from: prev, to: status }, c);
+    }
+    return r.rows[0];
+  });
+}
+
 export async function lowStockDemandList() {
   const r = await query(
     `SELECT p.id, p.sku, p.barcode, p.name, p.reorder_level, p.cost AS last_cost,

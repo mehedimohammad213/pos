@@ -163,6 +163,19 @@ router.post('/serials', authRequired, requireRoles('admin', 'manager', 'stock'),
   }
 });
 
+router.patch('/serials/:id', authRequired, requireRoles('admin', 'manager', 'stock'), async (req, res, next) => {
+  try {
+    const body = z
+      .object({
+        status: z.enum(['in_stock', 'sold', 'returned', 'defective']),
+      })
+      .parse(req.body);
+    res.json(await catalog.updateSerialStatus(param(req.params.id), body.status, req.user!.id));
+  } catch (e) {
+    next(e);
+  }
+});
+
 router.get('/low-stock', authRequired, async (_req, res, next) => {
   try {
     res.json(await catalog.lowStockDemandList());
