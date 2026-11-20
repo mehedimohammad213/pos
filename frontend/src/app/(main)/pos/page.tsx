@@ -1,17 +1,19 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { BarcodeScanner } from "@/components/BarcodeScanner";
 import { Alert, Btn, Field, Input, Modal, Select } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { formatBDT } from "@/lib/format";
+import { formatBDT, todayISO } from "@/lib/format";
 import { useTodayState } from "@/lib/use-client-date";
 import type { CartItem, Customer, Product, Sale, Serial, ShopSettings } from "@/lib/types";
 import { InvoicePreview } from "@/components/InvoicePreview";
 import { PAYMENT_METHODS } from "@/lib/types";
 
 type PayRow = { method: string; amount: string; reference: string };
+
+const EMPTY_PAYMENT: PayRow = { method: "cash", amount: "", reference: "" };
 
 export default function PosPage() {
   const { hasPermission } = useAuth();
@@ -30,7 +32,7 @@ export default function PosPage() {
   const [customerSaving, setCustomerSaving] = useState(false);
   const [customerModalError, setCustomerModalError] = useState("");
   const [newCustomer, setNewCustomer] = useState({ name: "", phone: "", address: "" });
-  const [payments, setPayments] = useState<PayRow[]>([{ method: "cash", amount: "", reference: "" }]);
+  const [payments, setPayments] = useState<PayRow[]>([{ ...EMPTY_PAYMENT }]);
   const [installment, setInstallment] = useState({ down: "", months: "3" });
   const [useInstallment, setUseInstallment] = useState(false);
   const [held, setHeld] = useState<Sale[]>([]);
@@ -52,6 +54,38 @@ export default function PosPage() {
   const total = Math.max(0, subtotal - discountAmt);
   const paidTotal = payments.reduce((s, p) => s + (Number(p.amount) || 0), 0);
   const prevTotalRef = useRef(total);
+
+  // cacheComponents keeps this route mounted (Activity hidden). Clear sale entry when leaving
+  // so returning to POS always starts a fresh cart / transaction.
+  useLayoutEffect(() => {
+    return () => {
+      setQ("");
+      setCart([]);
+      setSaleType("retail");
+      setSaleDate(todayISO());
+      setDiscount("");
+      setNotes("");
+      setCustomerQ("");
+      setCustomer(null);
+      setCustomerNotFound(false);
+      setCustomerSearching(false);
+      setAddCustomerOpen(false);
+      setCustomerSaving(false);
+      setCustomerModalError("");
+      setNewCustomer({ name: "", phone: "", address: "" });
+      setPayments([{ ...EMPTY_PAYMENT }]);
+      setInstallment({ down: "", months: "3" });
+      setUseInstallment(false);
+      setScanOpen(false);
+      setSerialModal(null);
+      setAvailableSerials([]);
+      setError("");
+      setSuccess("");
+      setReceipt(null);
+      setMobilePane("products");
+      prevTotalRef.current = 0;
+    };
+  }, [setSaleDate]);
 
   // Auto-fill payment amount with cart total (single payment row only)
   useEffect(() => {
@@ -302,7 +336,7 @@ export default function PosPage() {
       setCustomer(null);
       setCustomerQ("");
       setCustomerNotFound(false);
-      setPayments([{ method: "cash", amount: "", reference: "" }]);
+      setPayments([{ ...EMPTY_PAYMENT }]);
       if (hold) void api<Sale[]>("/sales/held").then(setHeld);
       if (hold) focusSearch(true);
     } catch (err) {
