@@ -471,38 +471,29 @@ export async function listHeldSales() {
   return listSales({ status: 'held' });
 }
 
-export async function recallHold(id: string, user: AuthUser, payments?: PaymentInput[]) {
+/**
+ * Load a held sale for the POS cart. Does not void, take payment, or change stock.
+ * The hold stays until the cashier completes payment (or voids it).
+ */
+export async function recallHold(id: string, user: AuthUser) {
   const held = await getSale(id);
   if (held.status !== 'held') throw new AppError('Sale is not on hold');
-  await query(`UPDATE sales SET status = 'voided', updated_at = NOW() WHERE id = $1`, [id]);
-  return createSale(
-    {
-      customer_id: held.customer_id ?? undefined,
-      sale_type: held.sale_type,
-      discount_amount: Number(held.discount_amount),
-      notes: held.notes ?? undefined,
-      items: held.items.map((it: Record<string, unknown>) => ({
-        product_id: String(it.product_id),
-        quantity: Number(it.quantity),
-        unit_price: Number(it.unit_price),
-        discount_amount: Number(it.discount_amount || 0),
-      })),
-      payments: payments || [{ method: 'cash', amount: Number(held.total) }],
-    },
-    user
-  );
+  await writeAudit(user.id, 'sale.recall', 'sale', id, { invoice: held.invoice_no });
+  return held;
 }
 
 export async function voidSale(id: string, user: AuthUser) {
-  if (!user.permissions.includes('void') && user.role !== 'admin') {
-    throw new AppError('Void not allowed', 403);
-  }
   return withTransaction(async (client) => {
     const sale = await getSale(id, client);
     if (sale.status === 'voided') throw new AppError('Already voided');
+    // Holds never took stock/payment — any cashier can clear them after recall/complete.
     if (sale.status === 'held') {
       await client.query(`UPDATE sales SET status = 'voided', updated_at = NOW() WHERE id = $1`, [id]);
+      await writeAudit(user.id, 'sale.hold_clear', 'sale', id, { invoice: sale.invoice_no }, client);
       return getSale(id, client);
+    }
+    if (!user.permissions.includes('void') && user.role !== 'admin') {
+      throw new AppError('Void not allowed', 403);
     }
     for (const item of sale.items as Array<Record<string, unknown>>) {
       await client.query(

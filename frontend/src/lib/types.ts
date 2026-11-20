@@ -90,6 +90,9 @@ export type SaleLine = {
   id?: string;
   product_id: string;
   product_name?: string;
+  sku?: string;
+  barcode?: string;
+  serial_required?: boolean;
   quantity: number;
   unit_price: number;
   discount_amount?: number;

@@ -145,7 +145,7 @@ router.post('/', authRequired, async (req, res, next) => {
 
 router.post('/:id/recall', authRequired, async (req, res, next) => {
   try {
-    res.json(await sales.recallHold(param(req.params.id), req.user!, req.body.payments));
+    res.json(await sales.recallHold(param(req.params.id), req.user!));
   } catch (e) {
     next(e);
   }

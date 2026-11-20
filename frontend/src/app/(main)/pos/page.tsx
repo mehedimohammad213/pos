@@ -36,6 +36,7 @@ export default function PosPage() {
   const [installment, setInstallment] = useState({ down: "", months: "3" });
   const [useInstallment, setUseInstallment] = useState(false);
   const [held, setHeld] = useState<Sale[]>([]);
+  const [activeHoldId, setActiveHoldId] = useState<string | null>(null);
   const [scanOpen, setScanOpen] = useState(false);
   const [serialModal, setSerialModal] = useState<{ idx: number; product: Product; picked: string[] } | null>(
     null
@@ -82,6 +83,7 @@ export default function PosPage() {
       setError("");
       setSuccess("");
       setReceipt(null);
+      setActiveHoldId(null);
       setMobilePane("products");
       prevTotalRef.current = 0;
     };
@@ -329,6 +331,15 @@ export default function PosPage() {
           .map((p) => ({ method: p.method, amount: Number(p.amount), reference: p.reference || undefined }));
       }
       const sale = await api<Sale>("/sales", { method: "POST", body: JSON.stringify(body) });
+      // Clear the hold that was loaded into the cart (recall no longer voids it immediately).
+      if (activeHoldId) {
+        try {
+          await api(`/sales/${activeHoldId}/void`, { method: "POST" });
+        } catch {
+          /* hold may already be gone */
+        }
+        setActiveHoldId(null);
+      }
       setSuccess(hold ? `Held as ${sale.invoice_no || sale.id}` : `Sale ${sale.invoice_no || sale.id} complete`);
       if (!hold) setReceipt(sale);
       setCart([]);
@@ -337,7 +348,7 @@ export default function PosPage() {
       setCustomerQ("");
       setCustomerNotFound(false);
       setPayments([{ ...EMPTY_PAYMENT }]);
-      if (hold) void api<Sale[]>("/sales/held").then(setHeld);
+      void api<Sale[]>("/sales/held").then(setHeld).catch(() => setHeld([]));
       if (hold) focusSearch(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Sale failed");
@@ -345,10 +356,56 @@ export default function PosPage() {
   }
 
   async function recall(id: string) {
+    setError("");
+    setSuccess("");
     try {
-      await api(`/sales/${id}/recall`, { method: "POST", body: JSON.stringify({}) });
-      setSuccess("Hold recalled — check sales list");
-      setHeld(await api<Sale[]>("/sales/held"));
+      const heldSale = await api<Sale>(`/sales/${id}/recall`, { method: "POST", body: JSON.stringify({}) });
+      const lines = heldSale.items || [];
+      if (!lines.length) {
+        setError("Held sale has no items");
+        return;
+      }
+      const cartLines: CartItem[] = lines.map((it) => {
+        const serials = Array.isArray(it.serials) ? it.serials : [];
+        const product: Product = {
+          id: String(it.product_id),
+          name: it.product_name || "Product",
+          sku: it.sku,
+          barcode: it.barcode,
+          retail_price: Number(it.unit_price),
+          serial_required: Boolean(it.serial_required),
+        };
+        return {
+          product,
+          quantity: Number(it.quantity),
+          unit_price: Number(it.unit_price),
+          discount_amount: Number(it.discount_amount || 0),
+          serial_ids: serials.map((s) => s.serial_id).filter(Boolean),
+        };
+      });
+      setCart(cartLines);
+      setActiveHoldId(heldSale.id);
+      setSaleType(heldSale.sale_type === "wholesale" ? "wholesale" : "retail");
+      setDiscount(Number(heldSale.discount_amount) > 0 ? String(Number(heldSale.discount_amount)) : "");
+      setNotes(heldSale.notes || heldSale.hold_name || "");
+      setUseInstallment(false);
+      setPayments([{ ...EMPTY_PAYMENT }]);
+      if (heldSale.customer_id) {
+        setCustomer({
+          id: heldSale.customer_id,
+          name: heldSale.customer_name || "",
+          phone: heldSale.customer_phone || "",
+        });
+        setCustomerQ(heldSale.customer_phone || "");
+        setCustomerNotFound(false);
+      } else {
+        setCustomer(null);
+        setCustomerQ("");
+        setCustomerNotFound(false);
+      }
+      setMobilePane("cart");
+      setSuccess("Hold loaded into cart — take payment when ready");
+      focusSearch(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Recall failed");
     }
@@ -678,6 +735,11 @@ function PosCartPanel(props: {
     <div className="space-y-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm sm:p-4">
       <h2 className="font-semibold">Cart</h2>
       <ul className="max-h-56 space-y-2 overflow-y-auto sm:max-h-48">
+        {props.cart.length === 0 ? (
+          <li className="rounded-lg border border-dashed border-slate-200 px-3 py-6 text-center text-sm text-slate-500">
+            No items yet. Add products, or recall a held sale.
+          </li>
+        ) : null}
         {props.cart.map((line, i) => (
           <li key={`${line.product.id}-${i}`} className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2">
             <div className="min-w-0 flex-1">
