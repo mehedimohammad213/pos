@@ -37,6 +37,8 @@ export default function PosPage() {
   const [useInstallment, setUseInstallment] = useState(false);
   const [held, setHeld] = useState<Sale[]>([]);
   const [activeHoldId, setActiveHoldId] = useState<string | null>(null);
+  const [cancelHoldTarget, setCancelHoldTarget] = useState<Sale | null>(null);
+  const [cancelHoldBusy, setCancelHoldBusy] = useState(false);
   const [scanOpen, setScanOpen] = useState(false);
   const [serialModal, setSerialModal] = useState<{ idx: number; product: Product; picked: string[] } | null>(
     null
@@ -48,7 +50,7 @@ export default function PosPage() {
   const [receipt, setReceipt] = useState<Sale | null>(null);
   const [mobilePane, setMobilePane] = useState<"products" | "cart">("products");
   const searchRef = useRef<HTMLInputElement>(null);
-  const modalOpen = scanOpen || !!serialModal || !!receipt || addCustomerOpen;
+  const modalOpen = scanOpen || !!serialModal || !!receipt || addCustomerOpen || !!cancelHoldTarget;
 
   const subtotal = cart.reduce((s, l) => s + l.unit_price * l.quantity - l.discount_amount, 0);
   const discountAmt = Number(discount) || 0;
@@ -84,6 +86,8 @@ export default function PosPage() {
       setSuccess("");
       setReceipt(null);
       setActiveHoldId(null);
+      setCancelHoldTarget(null);
+      setCancelHoldBusy(false);
       setMobilePane("products");
       prevTotalRef.current = 0;
     };
@@ -411,6 +415,35 @@ export default function PosPage() {
     }
   }
 
+  async function confirmCancelHold() {
+    if (!cancelHoldTarget) return;
+    const id = cancelHoldTarget.id;
+    setError("");
+    setSuccess("");
+    setCancelHoldBusy(true);
+    try {
+      await api(`/sales/${id}/void`, { method: "POST" });
+      if (activeHoldId === id) {
+        setActiveHoldId(null);
+        setCart([]);
+        setDiscount("");
+        setNotes("");
+        setCustomer(null);
+        setCustomerQ("");
+        setCustomerNotFound(false);
+        setPayments([{ ...EMPTY_PAYMENT }]);
+      }
+      setHeld(await api<Sale[]>("/sales/held"));
+      setCancelHoldTarget(null);
+      setSuccess("Held sale cancelled");
+      focusSearch(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Cancel hold failed");
+    } finally {
+      setCancelHoldBusy(false);
+    }
+  }
+
   function applySerials() {
     if (!serialModal) return;
     const price =
@@ -525,9 +558,40 @@ export default function PosPage() {
             completeSale={completeSale}
             held={held}
             recall={recall}
+            onCancelHold={setCancelHoldTarget}
           />
         </div>
       </div>
+
+      <Modal
+        open={!!cancelHoldTarget}
+        onClose={() => {
+          if (!cancelHoldBusy) setCancelHoldTarget(null);
+        }}
+        title="Cancel held sale"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-slate-600">
+            Cancel{" "}
+            <span className="font-medium text-slate-900">
+              {cancelHoldTarget?.hold_name || cancelHoldTarget?.invoice_no || "this held sale"}
+            </span>
+            ? It will be removed and cannot be restored.
+          </p>
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <Btn
+              variant="secondary"
+              disabled={cancelHoldBusy}
+              onClick={() => setCancelHoldTarget(null)}
+            >
+              Keep hold
+            </Btn>
+            <Btn variant="danger" disabled={cancelHoldBusy} onClick={() => void confirmCancelHold()}>
+              {cancelHoldBusy ? "Cancelling…" : "Yes, cancel hold"}
+            </Btn>
+          </div>
+        </div>
+      </Modal>
 
       <Modal open={addCustomerOpen} onClose={() => setAddCustomerOpen(false)} title="New customer">
         <form onSubmit={saveCustomer} className="space-y-3">
@@ -730,6 +794,7 @@ function PosCartPanel(props: {
   completeSale: (hold?: boolean) => void;
   held: Sale[];
   recall: (id: string) => void;
+  onCancelHold: (sale: Sale) => void;
 }) {
   return (
     <div className="space-y-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm sm:p-4">
@@ -854,7 +919,7 @@ function PosCartPanel(props: {
       </Field>
       <CartActions completeSale={props.completeSale} />
       {props.held.length ? (
-        <PurHolds held={props.held} recall={props.recall} />
+        <PurHolds held={props.held} recall={props.recall} onCancelHold={props.onCancelHold} />
       ) : null}
     </div>
   );
@@ -964,16 +1029,29 @@ function CartActions({ completeSale }: { completeSale: (hold?: boolean) => void 
   );
 }
 
-function PurHolds({ held, recall }: { held: Sale[]; recall: (id: string) => void }) {
+function PurHolds({
+  held,
+  recall,
+  onCancelHold,
+}: {
+  held: Sale[];
+  recall: (id: string) => void;
+  onCancelHold: (sale: Sale) => void;
+}) {
   return (
     <div className="border-t pt-3">
       <p className="text-xs font-medium uppercase text-slate-500">Held sales</p>
       {held.map((h) => (
-        <div key={h.id} className="mt-2 flex items-center justify-between text-sm">
-          <span>{h.hold_name || h.invoice_no || h.id.slice(0, 8)}</span>
-          <Btn variant="ghost" onClick={() => void recall(h.id)}>
-            Recall
-          </Btn>
+        <div key={h.id} className="mt-2 flex flex-wrap items-center justify-between gap-2 text-sm">
+          <span className="min-w-0 flex-1 truncate">{h.hold_name || h.invoice_no || h.id.slice(0, 8)}</span>
+          <div className="flex shrink-0 gap-1">
+            <Btn variant="ghost" onClick={() => void recall(h.id)}>
+              Recall
+            </Btn>
+            <Btn variant="ghost" className="text-red-600 hover:text-red-700" onClick={() => onCancelHold(h)}>
+              Cancel
+            </Btn>
+          </div>
         </div>
       ))}
     </div>
