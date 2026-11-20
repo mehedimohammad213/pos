@@ -204,13 +204,22 @@ async function createSaleTx(
           line.lineTotal,
         ]
       );
-      if (!input.hold) {
-        await client.query(
-          `UPDATE product_stock SET quantity = quantity - $2, updated_at = NOW() WHERE product_id = $1`,
-          [line.product.id, line.quantity]
-        );
-        if (line.serial_ids?.length) {
-          for (const serialId of line.serial_ids) {
+      // Always record serials on the sale (including holds) so recall can restore them.
+      // Stock / serial status only change on completed sales — holds keep units available.
+      if (line.serial_ids?.length) {
+        for (const serialId of line.serial_ids) {
+          if (input.hold) {
+            const ser = await client.query(
+              `SELECT id FROM serials
+               WHERE id = $1 AND product_id = $2 AND status = 'in_stock'`,
+              [serialId, line.product.id]
+            );
+            if (!ser.rows[0]) throw new AppError(`Serial unavailable: ${serialId}`);
+            await client.query(
+              `INSERT INTO sale_serials (sale_item_id, serial_id) VALUES ($1,$2)`,
+              [item.rows[0].id, serialId]
+            );
+          } else {
             const ser = await client.query(
               `UPDATE serials SET status = 'sold', sale_item_id = $2,
                  warranty_expires_at = CASE WHEN warranty_months > 0
@@ -228,6 +237,12 @@ async function createSaleTx(
             );
           }
         }
+      }
+      if (!input.hold) {
+        await client.query(
+          `UPDATE product_stock SET quantity = quantity - $2, updated_at = NOW() WHERE product_id = $1`,
+          [line.product.id, line.quantity]
+        );
       }
     }
 
@@ -322,6 +337,8 @@ export async function createSale(
     notes?: string;
     hold?: boolean;
     hold_name?: string;
+    /** When completing/replacing a recalled hold, clear it in the same transaction. */
+    replace_hold_id?: string;
     items: SaleLineInput[];
     payments?: PaymentInput[];
     installment?: { down_payment: number; months: number; start_date?: string };
@@ -330,8 +347,28 @@ export async function createSale(
   user: AuthUser,
   client?: PoolClient
 ) {
-  if (client) return createSaleTx(client, input, user);
-  return withTransaction((c) => createSaleTx(c, input, user));
+  const run = async (c: PoolClient) => {
+    if (input.replace_hold_id) {
+      const held = await getSale(input.replace_hold_id, c);
+      if (held.status !== 'held') {
+        throw new AppError('Recalled hold is no longer available', 409);
+      }
+      await c.query(`UPDATE sales SET status = 'voided', updated_at = NOW() WHERE id = $1`, [
+        input.replace_hold_id,
+      ]);
+      await writeAudit(
+        user.id,
+        'sale.hold_clear',
+        'sale',
+        input.replace_hold_id,
+        { invoice: held.invoice_no, reason: 'replaced_on_complete' },
+        c
+      );
+    }
+    return createSaleTx(c, input, user);
+  };
+  if (client) return run(client);
+  return withTransaction(run);
 }
 
 export type SaleDetail = Record<string, any> & {
@@ -478,7 +515,12 @@ export async function listHeldSales() {
 export async function recallHold(id: string, user: AuthUser) {
   const held = await getSale(id);
   if (held.status !== 'held') throw new AppError('Sale is not on hold');
-  await writeAudit(user.id, 'sale.recall', 'sale', id, { invoice: held.invoice_no });
+  if (!held.items?.length) throw new AppError('Held sale has no items');
+  try {
+    await writeAudit(user.id, 'sale.recall', 'sale', id, { invoice: held.invoice_no });
+  } catch {
+    // Audit must not block recalling a hold into the cart.
+  }
   return held;
 }
 

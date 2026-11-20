@@ -124,6 +124,7 @@ router.post('/', authRequired, async (req, res, next) => {
         notes: z.string().optional(),
         hold: z.boolean().optional(),
         hold_name: z.string().optional(),
+        replace_hold_id: z.string().uuid().optional(),
         items: z.array(lineSchema).min(1),
         payments: z
           .array(z.object({ method: z.string(), amount: z.number(), reference: z.string().optional() }))

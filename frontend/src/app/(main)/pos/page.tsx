@@ -365,20 +365,16 @@ export default function PosPage() {
           .filter((p) => Number(p.amount) > 0)
           .map((p) => ({ method: p.method, amount: Number(p.amount), reference: p.reference || undefined }));
       }
+      // Completing or re-holding after recall clears the old hold in the same API transaction.
+      if (activeHoldId) {
+        body.replace_hold_id = activeHoldId;
+      }
       const soldQtyByProduct = new Map<string, number>();
       for (const line of cart) {
         soldQtyByProduct.set(line.product.id, (soldQtyByProduct.get(line.product.id) || 0) + line.quantity);
       }
       const sale = await api<Sale>("/sales", { method: "POST", body: JSON.stringify(body) });
-      // Clear the hold that was loaded into the cart (recall no longer voids it immediately).
-      if (activeHoldId) {
-        try {
-          await api(`/sales/${activeHoldId}/void`, { method: "POST" });
-        } catch {
-          /* hold may already be gone */
-        }
-        setActiveHoldId(null);
-      }
+      setActiveHoldId(null);
       if (hold) {
         setSuccess(`Held as ${sale.invoice_no || sale.id}`);
         clearSuccessSoon();
@@ -460,7 +456,14 @@ export default function PosPage() {
         setCustomerNotFound(false);
       }
       setMobilePane("cart");
-      setSuccess("Hold loaded into cart — take payment when ready");
+      const missingSerials = cartLines.some(
+        (l) => l.product.serial_required && l.serial_ids.length !== l.quantity
+      );
+      setSuccess(
+        missingSerials
+          ? "Hold loaded — re-select serial numbers before payment"
+          : "Hold loaded into cart — take payment when ready"
+      );
       focusSearch(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Recall failed");
@@ -485,10 +488,13 @@ export default function PosPage() {
         setCustomerNotFound(false);
         setPayments([{ ...EMPTY_PAYMENT }]);
       }
-      setHeld(await api<Sale[]>("/sales/held"));
+      setHeld((prev) => prev.filter((h) => h.id !== id));
       setCancelHoldTarget(null);
       setSuccess("Held sale cancelled");
       focusSearch(true);
+      void api<Sale[]>("/sales/held").then(setHeld).catch(() => {
+        /* keep optimistic list */
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Cancel hold failed");
     } finally {
