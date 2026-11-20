@@ -12,33 +12,62 @@ export default function LowStockPage() {
   const PAGE_SIZE = 10;
   const [page, setPage] = useState(1);
   const [rows, setRows] = useState<LowStockItem[]>([]);
-  const [selected, setSelected] = useState<Record<string, number>>({});
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
 
   const total = rows.length;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const paginatedRows = rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const allSelected = rows.length > 0 && selected.size === rows.length;
+  const someSelected = selected.size > 0 && selected.size < rows.length;
 
   useEffect(() => {
     void api<LowStockItem[]>("/catalog/low-stock").then((data) => {
       setRows(data);
-      const init: Record<string, number> = {};
-      for (const p of data) init[p.id] = Number(p.suggested_qty) || 1;
-      setSelected(init);
+      const initQty: Record<string, number> = {};
+      for (const p of data) initQty[p.id] = Number(p.suggested_qty) || 1;
+      setQuantities(initQty);
+      setSelected(new Set());
     });
   }, []);
 
+  function toggleOne(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleAll() {
+    if (allSelected) setSelected(new Set());
+    else setSelected(new Set(rows.map((p) => p.id)));
+  }
+
   async function createDemand() {
-    const items = Object.entries(selected)
-      .filter(([, qty]) => qty > 0)
-      .map(([product_id, quantity]) => {
-        const row = rows.find((r) => r.id === product_id);
-        return { product_id, requested_qty: quantity, last_cost: Number(row?.last_cost || 0) };
-      });
-    if (!items.length) {
-      setError("Select quantities for at least one product");
+    const items = rows
+      .filter((r) => selected.has(r.id))
+      .map((r) => ({
+        product_id: r.id,
+        requested_qty: quantities[r.id] ?? (Number(r.suggested_qty) || 1),
+        last_cost: Number(r.last_cost || 0),
+      }))
+      .filter((item) => item.requested_qty > 0);
+
+    if (!selected.size) {
+      setError("Select at least one product with the checkbox");
       return;
     }
+    if (!items.length) {
+      setError("Selected products need an order quantity greater than 0");
+      return;
+    }
+
+    setSaving(true);
+    setError("");
     try {
       const demand = await api<{ id: string }>("/purchases/demands", {
         method: "POST",
@@ -47,18 +76,54 @@ export default function LowStockPage() {
       router.push(`/demands/${demand.id}`);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed");
+    } finally {
+      setSaving(false);
     }
   }
 
   return (
     <div>
       <PageHeader title="Low stock">
-        <Btn onClick={() => void createDemand()}>Create purchase demand</Btn>
+        <Btn onClick={() => void createDemand()} disabled={!selected.size || saving}>
+          {saving
+            ? "Creating…"
+            : selected.size
+              ? `Create purchase demand (${selected.size})`
+              : "Create purchase demand"}
+        </Btn>
       </PageHeader>
       {error ? <Alert tone="error">{error}</Alert> : null}
+      <div className="mb-2 text-sm text-slate-600">
+        {selected.size > 0 ? (
+          <span>
+            {selected.size} selected
+            <button
+              type="button"
+              className="ml-2 text-teal-700 hover:underline"
+              onClick={() => setSelected(new Set())}
+            >
+              Clear
+            </button>
+          </span>
+        ) : (
+          <span className="text-slate-500">Check items, then create purchase demand</span>
+        )}
+      </div>
       <TableWrap>
         <thead>
           <tr>
+            <Th>
+              <input
+                type="checkbox"
+                aria-label="Select all low-stock products"
+                checked={allSelected}
+                ref={(el) => {
+                  if (el) el.indeterminate = someSelected;
+                }}
+                onChange={toggleAll}
+                disabled={!rows.length}
+              />
+            </Th>
             <Th>Product</Th>
             <Th>On hand</Th>
             <Th className="hidden sm:table-cell">Reorder</Th>
@@ -68,7 +133,15 @@ export default function LowStockPage() {
         </thead>
         <tbody>
           {paginatedRows.map((p) => (
-            <tr key={p.id}>
+            <tr key={p.id} className={selected.has(p.id) ? "bg-teal-50/60" : undefined}>
+              <Td>
+                <input
+                  type="checkbox"
+                  aria-label={`Select ${p.name}`}
+                  checked={selected.has(p.id)}
+                  onChange={() => toggleOne(p.id)}
+                />
+              </Td>
               <Td>
                 <div className="font-medium">{p.name}</div>
                 <div className="font-mono text-xs text-slate-500">{p.sku}</div>
@@ -81,15 +154,19 @@ export default function LowStockPage() {
                   type="number"
                   min={0}
                   className="w-20 rounded border border-slate-300 px-2 py-1"
-                  value={selected[p.id] ?? Number(p.suggested_qty)}
-                  onChange={(e) => setSelected({ ...selected, [p.id]: Number(e.target.value) || 0 })}
+                  value={quantities[p.id] ?? Number(p.suggested_qty)}
+                  onChange={(e) =>
+                    setQuantities({ ...quantities, [p.id]: Number(e.target.value) || 0 })
+                  }
                 />
               </Td>
             </tr>
           ))}
           {!rows.length ? (
             <tr>
-              <Td className="text-slate-500">No low-stock items</Td>
+              <Td className="text-slate-500" colSpan={6}>
+                No low-stock items
+              </Td>
             </tr>
           ) : null}
         </tbody>
