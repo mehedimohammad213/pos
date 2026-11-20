@@ -52,6 +52,23 @@ export default function PosPage() {
   const discountAmt = Number(discount) || 0;
   const total = Math.max(0, subtotal - discountAmt);
   const paidTotal = payments.reduce((s, p) => s + (Number(p.amount) || 0), 0);
+  const prevTotalRef = useRef(total);
+
+  // Auto-fill payment amount with cart total (single payment row only)
+  useEffect(() => {
+    const prevTotal = prevTotalRef.current;
+    prevTotalRef.current = total;
+    setPayments((prev) => {
+      if (prev.length !== 1) return prev;
+      const current = prev[0].amount;
+      const wasEmpty = current === "";
+      const matchedPrev = current === String(prevTotal) || Number(current) === prevTotal;
+      if (!wasEmpty && !matchedPrev) return prev;
+      const nextAmount = total > 0 ? String(total) : "";
+      if (current === nextAmount) return prev;
+      return [{ ...prev[0], amount: nextAmount }];
+    });
+  }, [total]);
 
   const focusBarcode = useCallback((force = false) => {
     if (modalOpen) return;
