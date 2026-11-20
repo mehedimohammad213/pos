@@ -151,7 +151,8 @@ async function createSaleTx(
     else if (dueAmount > 0 && paidAmount > 0) paymentStatus = 'partial';
     else if (dueAmount > 0) paymentStatus = 'due';
 
-    if (dueAmount > 0 && !input.installment) {
+    // Hold is not a credit sale — payment comes later on recall. Skip due/customer checks.
+    if (dueAmount > 0 && !input.installment && !input.hold) {
       if (!input.customer_id) throw new AppError('Customer required for credit/due sale');
       const cust = await client.query(`SELECT * FROM customers WHERE id = $1 FOR UPDATE`, [input.customer_id]);
       const customer = assertFound(cust.rows[0], 'Customer not found');
