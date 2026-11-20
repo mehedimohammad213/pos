@@ -144,16 +144,21 @@ export default function InstallmentsPage() {
           <tr>
             <Th>Customer</Th>
             <Th>Total</Th>
-            <Th>Monthly</Th>
+            <Th className="hidden sm:table-cell">Monthly</Th>
             <Th>Status</Th>
           </tr>
         </thead>
         <tbody>
           {plans.map((p) => (
             <tr key={p.id}>
-              <Td>{p.customer_name}</Td>
-              <Td className="font-mono">{formatBDT(p.total_amount)}</Td>
-              <Td className="font-mono">{formatBDT(p.monthly_amount)}</Td>
+              <Td className="max-w-[10rem] truncate">{p.customer_name}</Td>
+              <Td className="font-mono">
+                {formatBDT(p.total_amount)}
+                <span className="mt-0.5 block text-[11px] text-slate-500 sm:hidden">
+                  /mo {formatBDT(p.monthly_amount)}
+                </span>
+              </Td>
+              <Td className="hidden font-mono sm:table-cell">{formatBDT(p.monthly_amount)}</Td>
               <Td>{p.status}</Td>
             </tr>
           ))}

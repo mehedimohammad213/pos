@@ -143,18 +143,18 @@ function DocumentEditorContent() {
             Google Docs–style editor. Insert fields like shop name and items table, then set for print.
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Btn variant="secondary" onClick={() => setShowPreview((v) => !v)}>
-            {showPreview ? "Hide preview" : "Preview with sample"}
+        <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:justify-end">
+          <Btn variant="secondary" className="flex-1 sm:flex-none" onClick={() => setShowPreview((v) => !v)}>
+            {showPreview ? "Hide preview" : "Preview"}
           </Btn>
-          <Btn variant="secondary" onClick={printPreview}>
+          <Btn variant="secondary" className="flex-1 sm:flex-none" onClick={printPreview}>
             Print sample
           </Btn>
-          <Btn variant="secondary" disabled={saving} onClick={() => void save()}>
+          <Btn variant="secondary" className="flex-1 sm:flex-none" disabled={saving} onClick={() => void save()}>
             {saving ? "Saving…" : "Save"}
           </Btn>
-          <Btn disabled={saving} onClick={() => void setForPrint()}>
-            {template?.is_default ? "Saved as print default" : "Set for print"}
+          <Btn className="w-full sm:w-auto" disabled={saving} onClick={() => void setForPrint()}>
+            {template?.is_default ? "Print default" : "Set for print"}
           </Btn>
         </div>
       </div>
@@ -194,8 +194,8 @@ function DocumentEditorContent() {
           <h2 className="mb-3 text-sm font-semibold text-slate-700">Live preview (sample sale)</h2>
           <div className="overflow-x-auto">
             <div
-              className={`mx-auto bg-white p-4 shadow sm:p-6 ${
-                paper === "pos80" ? "w-[80mm] text-[12px]" : "w-[210mm] max-w-[210mm]"
+              className={`mx-auto max-w-full bg-white p-4 shadow sm:p-6 ${
+                paper === "pos80" ? "w-[80mm] text-[12px]" : "w-full sm:w-[210mm] sm:max-w-[210mm]"
               }`}
               dangerouslySetInnerHTML={{ __html: previewHtml }}
             />

@@ -189,7 +189,7 @@ function SaleDetailContent() {
               {(sale.items || []).map((line) =>
                 line.id ? (
                   <tr key={line.id}>
-                    <Td>{line.product_name}</Td>
+                    <Td className="max-w-xs truncate">{line.product_name}</Td>
                     <Td className="font-mono">{line.quantity}</Td>
                     <Td>
                       <Input

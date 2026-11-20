@@ -181,7 +181,7 @@ export default function CustomersPage() {
         <thead>
           <tr>
             <Th>Name</Th>
-            <Th>Phone</Th>
+            <Th className="hidden sm:table-cell">Phone</Th>
             <Th className="hidden md:table-cell">Credit limit</Th>
             <Th>Due balance</Th>
             <Th />
@@ -190,28 +190,31 @@ export default function CustomersPage() {
         <tbody>
           {rows.map((c) => (
             <tr key={c.id}>
-              <Td>
-                <Link href={`/customers/${c.id}`} className="font-medium text-teal-700 hover:underline">
+              <Td className="max-w-[10rem]">
+                <Link href={`/customers/${c.id}`} className="block truncate font-medium text-teal-700 hover:underline">
                   {c.name}
                 </Link>
+                <span className="mt-0.5 block font-mono text-[11px] text-slate-500 sm:hidden">{c.phone}</span>
               </Td>
-              <Td className="font-mono">{c.phone}</Td>
+              <Td className="hidden font-mono sm:table-cell">{c.phone}</Td>
               <Td className="hidden font-mono md:table-cell">{formatBDT(c.credit_limit)}</Td>
               <Td className="font-mono">{formatBDT(c.due_balance)}</Td>
-              <Td className="space-x-1 text-right">
-                <Link href={`/customers/${c.id}`}>
-                  <Btn variant="ghost" className="text-xs">
-                    Open
+              <Td>
+                <div className="flex flex-wrap justify-end gap-1">
+                  <Link href={`/customers/${c.id}`}>
+                    <Btn variant="ghost" className="text-xs">
+                      Open
+                    </Btn>
+                  </Link>
+                  <Btn
+                    variant="ghost"
+                    className="text-xs"
+                    disabled={!(c.due_balance && Number(c.due_balance) > 0)}
+                    onClick={() => void openCollect(c)}
+                  >
+                    Collect
                   </Btn>
-                </Link>
-                <Btn
-                  variant="ghost"
-                  className="text-xs"
-                  disabled={!(c.due_balance && Number(c.due_balance) > 0)}
-                  onClick={() => void openCollect(c)}
-                >
-                  Collect due
-                </Btn>
+                </div>
               </Td>
             </tr>
           ))}

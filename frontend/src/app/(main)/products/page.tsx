@@ -256,10 +256,20 @@ export default function ProductsPage() {
     <div>
       <div className="no-print">
       <PageHeader title="Products">
-        <Btn variant="secondary" onClick={() => setScanOpen(true)} title="Scan barcode with camera into search">
+        <Btn
+          variant="secondary"
+          className="hidden sm:inline-flex"
+          onClick={() => setScanOpen(true)}
+          title="Scan barcode with camera into search"
+        >
           Camera scan
         </Btn>
-        <Btn variant="secondary" onClick={() => focusSearch(true)} title="Focus search for USB barcode wedge">
+        <Btn
+          variant="secondary"
+          className="hidden sm:inline-flex"
+          onClick={() => focusSearch(true)}
+          title="Focus search for USB barcode wedge"
+        >
           Barcode focus
         </Btn>
         <Btn
@@ -268,7 +278,7 @@ export default function ProductsPage() {
           disabled={!selected.size}
           title={selected.size ? `Print ${selected.size} selected barcode(s)` : "Select products first"}
         >
-          {selected.size ? `Print barcodes (${selected.size})` : "Print barcodes"}
+          {selected.size ? `Print (${selected.size})` : "Print barcodes"}
         </Btn>
         <Link href="/products/import">
           <Btn variant="secondary" title="Bulk upload products from CSV">
@@ -341,9 +351,9 @@ export default function ProductsPage() {
                   onChange={() => toggleOne(p.id)}
                 />
               </Td>
-              <Td>
-                <span className="font-medium">{p.name}</span>
-                <span className="mt-0.5 block font-mono text-[11px] text-slate-500 md:hidden">{p.sku}</span>
+              <Td className="max-w-[11rem]">
+                <span className="block truncate font-medium">{p.name}</span>
+                <span className="mt-0.5 block truncate font-mono text-[11px] text-slate-500 md:hidden">{p.sku}</span>
               </Td>
               <Td className="hidden font-mono text-xs md:table-cell">{p.sku}</Td>
               <Td className="hidden font-mono text-xs lg:table-cell">{p.barcode || "—"}</Td>

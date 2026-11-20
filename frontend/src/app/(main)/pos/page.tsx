@@ -525,13 +525,23 @@ export default function PosPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <h1 className="text-xl font-semibold text-slate-900 sm:text-2xl">Point of Sale</h1>
-        <div className="flex flex-wrap gap-2">
-          <Btn variant="secondary" onClick={() => setScanOpen(true)} title="Scan barcode with camera into search">
+        <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:justify-end">
+          <Btn
+            variant="secondary"
+            className="flex-1 sm:flex-none"
+            onClick={() => setScanOpen(true)}
+            title="Scan barcode with camera into search"
+          >
             Camera scan
           </Btn>
-          <Btn variant="secondary" onClick={() => focusSearch(true)} title="Focus search for USB barcode wedge">
+          <Btn
+            variant="secondary"
+            className="flex-1 sm:flex-none"
+            onClick={() => focusSearch(true)}
+            title="Focus search for USB barcode wedge"
+          >
             Barcode focus
           </Btn>
         </div>
@@ -571,11 +581,12 @@ export default function PosPage() {
           }`}
         >
           Cart{cart.length ? ` (${cart.length})` : ""}
+          {held.length ? ` · ${held.length} held` : ""}
         </button>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-5">
-        <div className={`lg:col-span-2 ${mobilePane === "products" ? "block" : "hidden lg:block"}`}>
+      <div className="grid items-start gap-4 lg:grid-cols-5 lg:items-stretch">
+        <div className={`min-h-0 lg:col-span-2 ${mobilePane === "products" ? "block" : "hidden lg:block"}`}>
           <PosProductGrid
             products={products}
             addProduct={async (p) => {
@@ -585,7 +596,7 @@ export default function PosPage() {
             saleType={saleType}
           />
         </div>
-        <div className={`lg:col-span-3 ${mobilePane === "cart" ? "block" : "hidden lg:block"}`}>
+        <div className={`min-h-0 lg:col-span-3 ${mobilePane === "cart" ? "block" : "hidden lg:block"}`}>
           <PosCartPanel
             cart={cart}
             setCart={setCart}
@@ -678,7 +689,7 @@ export default function PosPage() {
               onChange={(e) => setNewCustomer({ ...newCustomer, address: e.target.value })}
             />
           </Field>
-          <div className="flex justify-end gap-2 pt-2">
+          <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
             <Btn variant="secondary" type="button" onClick={() => setAddCustomerOpen(false)}>
               Cancel
             </Btn>
@@ -803,15 +814,15 @@ function PosProductGrid({
 }) {
   // ~10 products visible (5 rows × 2 cols); remaining scroll
   return (
-    <div className="grid max-h-[34rem] content-start gap-2 overflow-y-auto sm:grid-cols-2">
+    <div className="grid max-h-[min(34rem,calc(100dvh-14rem))] content-start gap-2 overflow-y-auto overscroll-contain sm:grid-cols-2 lg:max-h-[min(40rem,calc(100dvh-12rem))] lg:h-full">
       {products.map((p) => (
         <button
           key={p.id}
           type="button"
           onClick={() => void addProduct(p)}
-          className="rounded-xl border border-slate-200 bg-white p-3 text-left shadow-sm transition hover:border-teal-400 active:scale-[0.98] sm:p-4"
+          className="min-w-0 rounded-xl border border-slate-200 bg-white p-3 text-left shadow-sm transition hover:border-teal-400 active:scale-[0.98] sm:p-4"
         >
-          <p className="font-medium leading-snug">{p.name}</p>
+          <p className="line-clamp-2 font-medium leading-snug">{p.name}</p>
           <p className="font-mono text-base text-teal-700 sm:text-lg">
             {formatBDT(saleType === "wholesale" ? p.wholesale_price ?? p.retail_price : p.retail_price)}
           </p>
@@ -855,9 +866,9 @@ function PosCartPanel(props: {
   onCancelHold: (sale: Sale) => void;
 }) {
   return (
-    <div className="space-y-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm sm:p-4">
+    <div className="space-y-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm sm:p-4 lg:max-h-[min(40rem,calc(100dvh-12rem))] lg:overflow-y-auto">
       <h2 className="font-semibold">Cart</h2>
-      <ul className="max-h-56 space-y-2 overflow-y-auto sm:max-h-48">
+      <ul className="max-h-48 space-y-2 overflow-y-auto overscroll-contain sm:max-h-56">
         {props.cart.length === 0 ? (
           <li className="rounded-lg border border-dashed border-slate-200 px-3 py-6 text-center text-sm text-slate-500">
             No items yet. Add products, or recall a held sale.
@@ -865,7 +876,7 @@ function PosCartPanel(props: {
         ) : null}
         {props.cart.map((line, i) => (
           <li key={`${line.product.id}-${i}`} className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2">
-            <div className="min-w-0 flex-1">
+            <div className="min-w-0 flex-1 basis-[10rem]">
               <p className="truncate font-medium">{line.product.name}</p>
               {line.serial_ids.length ? (
                 <p className="text-xs text-slate-500">{line.serial_ids.length} serial(s)</p>
@@ -891,27 +902,32 @@ function PosCartPanel(props: {
           </li>
         ))}
       </ul>
-      <div className="grid gap-2 sm:grid-cols-2">
+      <div className="grid gap-2 sm:grid-cols-2 sm:items-end">
         <Field label="Order discount">
           <Input value={props.discountInput} onChange={(e) => props.setDiscountInput(e.target.value)} />
         </Field>
-        <div className="flex items-end justify-end font-mono text-xl font-semibold">{formatBDT(props.total)}</div>
+        <div className="flex items-end justify-between gap-2 sm:justify-end">
+          <span className="text-xs font-medium uppercase tracking-wide text-slate-500 sm:hidden">Total</span>
+          <span className="font-mono text-xl font-semibold">{formatBDT(props.total)}</span>
+        </div>
       </div>
       <Field label="Customer">
         {props.customer ? (
-          <div className="flex items-center justify-between rounded-lg border border-teal-200 bg-teal-50 px-3 py-2 text-sm text-teal-900">
-            <div className="min-w-0">
-              <span className="font-medium text-teal-950">{props.customer.name}</span>
-              <span className="ml-2 font-mono text-xs text-teal-700">({props.customer.phone})</span>
-              {Number(props.customer.due_balance) > 0 ? (
-                <span className="ml-2 rounded bg-amber-100 px-1.5 py-0.5 text-xs text-amber-800">
-                  Due: {formatBDT(Number(props.customer.due_balance))}
-                </span>
-              ) : null}
+          <div className="flex flex-col gap-2 rounded-lg border border-teal-200 bg-teal-50 px-3 py-2 text-sm text-teal-900 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0 flex-1">
+              <p className="truncate font-medium text-teal-950">{props.customer.name}</p>
+              <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                <span className="font-mono text-xs text-teal-700">({props.customer.phone})</span>
+                {Number(props.customer.due_balance) > 0 ? (
+                  <span className="rounded bg-amber-100 px-1.5 py-0.5 text-xs text-amber-800">
+                    Due: {formatBDT(Number(props.customer.due_balance))}
+                  </span>
+                ) : null}
+              </div>
             </div>
             <Btn
               variant="ghost"
-              className="text-xs text-red-600 hover:text-red-700"
+              className="shrink-0 self-end text-xs text-red-600 hover:text-red-700 sm:self-auto"
               onClick={() => {
                 props.setCustomer(null);
                 props.setCustomerNotFound(false);
@@ -939,21 +955,21 @@ function PosCartPanel(props: {
                 className="w-full sm:max-w-xs"
               />
               <div className="flex flex-wrap gap-2">
-                <Btn variant="secondary" onClick={() => void props.searchCustomer()} disabled={props.customerSearching}>
+                <Btn variant="secondary" className="flex-1 sm:flex-none" onClick={() => void props.searchCustomer()} disabled={props.customerSearching}>
                   {props.customerSearching ? "Searching…" : "Find customer"}
                 </Btn>
-                <Btn variant="secondary" onClick={props.onOpenAddCustomer}>
+                <Btn variant="secondary" className="flex-1 sm:flex-none" onClick={props.onOpenAddCustomer}>
                   + Add customer
                 </Btn>
               </div>
             </div>
 
             {props.customerNotFound ? (
-              <div className="flex items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-                <span>Customer not found for &quot;{props.customerQ}&quot;</span>
+              <div className="flex flex-col gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 sm:flex-row sm:items-center sm:justify-between">
+                <span className="min-w-0 break-words">Customer not found for &quot;{props.customerQ}&quot;</span>
                 <Btn
                   variant="primary"
-                  className="px-2.5 py-1 text-xs"
+                  className="shrink-0 px-2.5 py-1 text-xs"
                   onClick={props.onOpenAddCustomer}
                 >
                   Add customer

@@ -325,8 +325,8 @@ export function DocumentEditor({
 
   const sheetClass =
     paper === "pos80"
-      ? "w-[80mm] min-h-[140mm] px-3 py-4 text-[12px]"
-      : "w-[210mm] min-h-[297mm] px-12 py-10 text-[14px]";
+      ? "w-[80mm] max-w-full min-h-[140mm] px-3 py-4 text-[12px]"
+      : "w-full max-w-[210mm] min-h-[297mm] px-4 py-6 text-[14px] sm:w-[210mm] sm:px-12 sm:py-10";
 
   return (
     <div className="overflow-hidden rounded-xl border border-slate-200 bg-slate-100 shadow-sm">

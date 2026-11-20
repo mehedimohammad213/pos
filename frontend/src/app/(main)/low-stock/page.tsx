@@ -88,8 +88,18 @@ export default function LowStockPage() {
           {saving
             ? "Creating…"
             : selected.size
-              ? `Create purchase demand (${selected.size})`
-              : "Create purchase demand"}
+              ? (
+                <>
+                  <span className="sm:hidden">Demand ({selected.size})</span>
+                  <span className="hidden sm:inline">Create purchase demand ({selected.size})</span>
+                </>
+              )
+              : (
+                <>
+                  <span className="sm:hidden">Create demand</span>
+                  <span className="hidden sm:inline">Create purchase demand</span>
+                </>
+              )}
         </Btn>
       </PageHeader>
       {error ? <Alert tone="error">{error}</Alert> : null}
@@ -142,9 +152,9 @@ export default function LowStockPage() {
                   onChange={() => toggleOne(p.id)}
                 />
               </Td>
-              <Td>
-                <div className="font-medium">{p.name}</div>
-                <div className="font-mono text-xs text-slate-500">{p.sku}</div>
+              <Td className="max-w-[11rem]">
+                <div className="truncate font-medium">{p.name}</div>
+                <div className="truncate font-mono text-xs text-slate-500">{p.sku}</div>
               </Td>
               <Td className="font-mono">{Number(p.current_qty)}</Td>
               <Td className="hidden font-mono sm:table-cell">{Number(p.reorder_level)}</Td>

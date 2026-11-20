@@ -144,7 +144,7 @@ export default function PurchasesPage() {
         <Btn onClick={() => setPurOpen(true)}>New purchase</Btn>
       </PageHeader>
       {error ? <Alert tone="error">{error}</Alert> : null}
-      <div className="mb-4 flex gap-2">
+      <div className="mb-4 flex flex-wrap gap-2">
         <TabBtn active={tab === "purchases"} onClick={() => setTab("purchases")}>
           Purchases
         </TabBtn>
@@ -158,7 +158,7 @@ export default function PurchasesPage() {
           <TableWrap>
             <thead>
               <tr>
-                <Th>Date</Th>
+                <Th className="hidden sm:table-cell">Date</Th>
                 <Th>Supplier</Th>
                 <Th>Total</Th>
                 <Th>Status</Th>
@@ -167,8 +167,13 @@ export default function PurchasesPage() {
             <tbody>
               {purchases.map((p) => (
                 <tr key={p.id}>
-                  <Td>{formatDate(p.purchase_date)}</Td>
-                  <Td>{p.supplier_name}</Td>
+                  <Td className="hidden sm:table-cell">{formatDate(p.purchase_date)}</Td>
+                  <Td className="max-w-[10rem]">
+                    <span className="block truncate">{p.supplier_name || "—"}</span>
+                    <span className="mt-0.5 block text-[11px] text-slate-500 sm:hidden">
+                      {formatDate(p.purchase_date)}
+                    </span>
+                  </Td>
                   <Td className="font-mono">{formatBDT(p.total)}</Td>
                   <Td>{p.status}</Td>
                 </tr>
@@ -192,7 +197,7 @@ export default function PurchasesPage() {
             <thead>
               <tr>
                 <Th>Name</Th>
-                <Th>Phone</Th>
+                <Th className="hidden md:table-cell">Phone</Th>
                 <Th>Balance</Th>
                 <Th />
               </tr>
@@ -200,10 +205,15 @@ export default function PurchasesPage() {
             <tbody>
               {suppliers.map((s) => (
                 <tr key={s.id}>
-                  <Td>{s.name}</Td>
-                  <Td>{s.phone}</Td>
+                  <Td className="max-w-[10rem]">
+                    <span className="block truncate font-medium">{s.name}</span>
+                    <span className="mt-0.5 block font-mono text-[11px] text-slate-500 md:hidden">
+                      {s.phone || "—"}
+                    </span>
+                  </Td>
+                  <Td className="hidden font-mono md:table-cell">{s.phone}</Td>
                   <Td className="font-mono">{formatBDT(s.due_balance)}</Td>
-                  <Td>
+                  <Td className="text-right">
                     <Btn variant="ghost" className="text-xs" onClick={() => setPayOpen(s)}>
                       Pay
                     </Btn>

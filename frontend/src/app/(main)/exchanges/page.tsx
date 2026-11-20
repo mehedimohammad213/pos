@@ -129,7 +129,7 @@ export default function WalkInExchangePage() {
       {msg ? <Alert tone="success">{msg}</Alert> : null}
       {error ? <Alert tone="error">{error}</Alert> : null}
 
-      <div className="mb-4 grid gap-3 sm:grid-cols-3">
+      <div className="mb-4 grid gap-3 md:grid-cols-3">
         <Field label="Customer (optional)">
           <Select value={customerId} onChange={(e) => setCustomerId(e.target.value)}>
             <option value="">Walk-in</option>
@@ -152,7 +152,7 @@ export default function WalkInExchangePage() {
       </div>
 
       <section className="mb-6 rounded-xl border border-slate-200 bg-white p-5">
-        <div className="mb-3 flex items-center justify-between">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <h2 className="font-semibold">Items returned</h2>
           <Btn
             variant="secondary"
@@ -169,14 +169,14 @@ export default function WalkInExchangePage() {
               <Th>Product</Th>
               <Th>Qty</Th>
               <Th>Unit price</Th>
-              <Th>Condition</Th>
+              <Th className="hidden sm:table-cell">Condition</Th>
             </tr>
           </thead>
           <tbody>
             {returnLines.map((line, idx) => (
               <tr key={idx}>
-                <Td>
-                  <Select value={line.product_id} onChange={(e) => setReturnProduct(idx, e.target.value)}>
+                <Td className="min-w-0">
+                  <Select value={line.product_id} onChange={(e) => setReturnProduct(idx, e.target.value)} className="min-w-0">
                     <option value="">Select…</option>
                     {products.map((p) => (
                       <option key={p.id} value={p.id}>
@@ -207,7 +207,7 @@ export default function WalkInExchangePage() {
                     }}
                   />
                 </Td>
-                <Td>
+                <Td className="hidden sm:table-cell">
                   <Select
                     value={line.condition}
                     onChange={(e) => {
@@ -227,7 +227,7 @@ export default function WalkInExchangePage() {
       </section>
 
       <section className="mb-6 rounded-xl border border-slate-200 bg-white p-5">
-        <div className="mb-3 flex items-center justify-between">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <h2 className="font-semibold">New items</h2>
           <Btn
             variant="secondary"

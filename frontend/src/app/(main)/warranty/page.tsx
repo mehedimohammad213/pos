@@ -99,9 +99,9 @@ export default function WarrantyPage() {
           {rows.map((w) => (
             <tr key={w.id}>
               <Td className="hidden sm:table-cell">{formatDate(w.created_at)}</Td>
-              <Td>
-                <div className="font-medium">{w.product_name}</div>
-                <div className="mt-0.5 font-mono text-[11px] text-slate-500 md:hidden">{w.serial_number}</div>
+              <Td className="max-w-[12rem]">
+                <div className="truncate font-medium">{w.product_name}</div>
+                <div className="mt-0.5 truncate font-mono text-[11px] text-slate-500 md:hidden">{w.serial_number}</div>
               </Td>
               <Td className="hidden font-mono text-xs md:table-cell">{w.serial_number}</Td>
               <Td className="hidden lg:table-cell">{w.customer_name}</Td>

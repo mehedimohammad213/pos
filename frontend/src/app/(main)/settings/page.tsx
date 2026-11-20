@@ -259,14 +259,14 @@ export default function SettingsPage() {
               Open since {formatDateTime(shift.opened_at)} — opening cash {shift.opening_cash ?? 0}
             </p>
             <Field label="Closing cash">
-              <Input value={closeCash} onChange={(e) => setCloseCash(e.target.value)} className="max-w-xs" />
+              <Input value={closeCash} onChange={(e) => setCloseCash(e.target.value)} className="w-full sm:max-w-xs" />
             </Field>
             <Btn onClick={() => void closeShift()}>Close shift</Btn>
           </div>
         ) : (
           <div className="mt-3">
             <Field label="Opening cash">
-              <Input value={openCash} onChange={(e) => setOpenCash(e.target.value)} className="max-w-xs" />
+              <Input value={openCash} onChange={(e) => setOpenCash(e.target.value)} className="w-full sm:max-w-xs" />
             </Field>
             <Btn className="mt-2" onClick={() => void openShift()}>
               Open shift
@@ -282,20 +282,23 @@ export default function SettingsPage() {
             <thead>
               <tr>
                 <Th>Name</Th>
-                <Th>Email</Th>
+                <Th className="hidden sm:table-cell">Email</Th>
                 <Th>Role</Th>
-                <Th>Status</Th>
+                <Th className="hidden md:table-cell">Status</Th>
                 <Th />
               </tr>
             </thead>
             <tbody>
               {users.map((u) => (
                 <tr key={u.id}>
-                  <Td>{u.name}</Td>
-                  <Td>{u.email}</Td>
+                  <Td className="max-w-[9rem]">
+                    <span className="block truncate font-medium">{u.name}</span>
+                    <span className="mt-0.5 block truncate text-[11px] text-slate-500 sm:hidden">{u.email}</span>
+                  </Td>
+                  <Td className="hidden max-w-[12rem] truncate sm:table-cell">{u.email}</Td>
                   <Td>{u.role}</Td>
-                  <Td>{u.is_active === false ? "Inactive" : "Active"}</Td>
-                  <Td>
+                  <Td className="hidden md:table-cell">{u.is_active === false ? "Inactive" : "Active"}</Td>
+                  <Td className="text-right">
                     <Btn variant="ghost" className="text-xs" onClick={() => openEdit(u)}>
                       Edit
                     </Btn>
@@ -315,19 +318,27 @@ export default function SettingsPage() {
             <thead>
               <tr>
                 <Th>Opened</Th>
-                <Th>Closed</Th>
-                <Th>Opening</Th>
-                <Th>Closing</Th>
+                <Th className="hidden sm:table-cell">Closed</Th>
+                <Th className="hidden md:table-cell">Opening</Th>
+                <Th className="hidden md:table-cell">Closing</Th>
                 <Th>Expected</Th>
               </tr>
             </thead>
             <tbody>
               {shifts.map((s) => (
                 <tr key={s.id}>
-                  <Td>{formatDateTime(s.opened_at)}</Td>
-                  <Td>{formatDateTime(s.closed_at)}</Td>
-                  <Td className="font-mono">{s.opening_cash}</Td>
-                  <Td className="font-mono">{s.closing_cash}</Td>
+                  <Td>
+                    <span className="block text-sm">{formatDateTime(s.opened_at)}</span>
+                    <span className="mt-0.5 block text-[11px] text-slate-500 sm:hidden">
+                      Closed: {formatDateTime(s.closed_at)}
+                    </span>
+                    <span className="mt-0.5 block font-mono text-[11px] text-slate-500 md:hidden">
+                      Open {s.opening_cash} · Close {s.closing_cash}
+                    </span>
+                  </Td>
+                  <Td className="hidden sm:table-cell">{formatDateTime(s.closed_at)}</Td>
+                  <Td className="hidden font-mono md:table-cell">{s.opening_cash}</Td>
+                  <Td className="hidden font-mono md:table-cell">{s.closing_cash}</Td>
                   <Td className="font-mono">{s.expected_cash ?? "—"}</Td>
                 </tr>
               ))}

@@ -97,14 +97,14 @@ function DemandDetailContent() {
   return (
     <div>
       <PageHeader title={`Demand ${demand.demand_no || id.slice(0, 8)}`}>
-        <Btn variant="secondary" className="no-print" onClick={() => exportCsv()}>
+        <Btn variant="secondary" className="no-print flex-1 sm:flex-none" onClick={() => exportCsv()}>
           Export CSV
         </Btn>
-        <Btn variant="secondary" className="no-print" onClick={() => window.print()}>
+        <Btn variant="secondary" className="no-print flex-1 sm:flex-none" onClick={() => window.print()}>
           Print
         </Btn>
         {canConvert ? (
-          <Btn className="no-print" onClick={() => setConvertOpen(true)}>
+          <Btn className="no-print w-full sm:w-auto" onClick={() => setConvertOpen(true)}>
             Convert to purchase
           </Btn>
         ) : null}
@@ -153,7 +153,7 @@ function DemandDetailContent() {
         <tbody>
           {(demand.items || []).map((item) => (
             <tr key={item.product_id}>
-              <Td>{item.product_name || item.product_id}</Td>
+              <Td className="max-w-[12rem] truncate">{item.product_name || item.product_id}</Td>
               <Td className="font-mono">{item.requested_qty}</Td>
               <Td className="font-mono">{item.last_cost != null ? formatBDT(item.last_cost) : "—"}</Td>
             </tr>

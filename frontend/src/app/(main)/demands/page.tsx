@@ -137,7 +137,7 @@ export default function DemandsPage() {
             <Th>Products</Th>
             <Th>Status</Th>
             <Th className="hidden sm:table-cell">Supplier</Th>
-            <Th>Created</Th>
+            <Th className="hidden md:table-cell">Created</Th>
             <Th />
           </tr>
         </thead>
@@ -146,16 +146,17 @@ export default function DemandsPage() {
             <tr key={d.id}>
               <Td className="font-mono text-xs">{d.demand_no || d.id.slice(0, 8)}</Td>
               <Td>
-                <div className="max-w-xs truncate text-sm" title={d.product_names || undefined}>
+                <div className="max-w-[10rem] truncate text-sm sm:max-w-xs" title={d.product_names || undefined}>
                   {d.product_names || "—"}
                 </div>
                 {d.item_count != null && d.item_count > 0 ? (
                   <div className="text-xs text-slate-500">{d.item_count} item{d.item_count === 1 ? "" : "s"}</div>
                 ) : null}
+                <div className="mt-0.5 text-[11px] text-slate-500 md:hidden">{formatDateTime(d.created_at)}</div>
               </Td>
               <Td>{d.status}</Td>
               <Td className="hidden sm:table-cell">{d.supplier_name || "—"}</Td>
-              <Td>{formatDateTime(d.created_at)}</Td>
+              <Td className="hidden md:table-cell">{formatDateTime(d.created_at)}</Td>
               <Td>
                 <Link href={`/demands/${d.id}`} className="text-teal-700 underline">
                   View

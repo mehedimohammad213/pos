@@ -4,9 +4,9 @@ import { forwardRef, type ReactNode } from "react";
 
 export function PageHeader({ title, children }: { title: string; children?: ReactNode }) {
   return (
-    <div className="mb-4 flex flex-wrap items-center justify-between gap-3 sm:mb-6">
-      <h1 className="text-xl font-semibold text-slate-900 sm:text-2xl">{title}</h1>
-      {children ? <div className="flex flex-wrap gap-2">{children}</div> : null}
+    <div className="mb-4 flex min-w-0 flex-wrap items-center justify-between gap-3 sm:mb-6">
+      <h1 className="min-w-0 flex-1 truncate text-xl font-semibold text-slate-900 sm:text-2xl">{title}</h1>
+      {children ? <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:justify-end">{children}</div> : null}
     </div>
   );
 }
@@ -32,7 +32,7 @@ export function Btn({
   return (
     <button
       type="button"
-      className={`inline-flex min-h-10 items-center justify-center rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50 ${styles[variant]} ${className}`}
+      className={`inline-flex min-h-10 items-center justify-center whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium sm:px-4 disabled:opacity-50 ${styles[variant]} ${className}`}
       {...props}
     >
       {children}
@@ -201,7 +201,7 @@ export function Drawer({
           }
         `}</style>
         <div className="flex shrink-0 items-center justify-between gap-3 border-b border-slate-200 px-4 py-4 sm:px-5">
-          <h2 className="truncate text-lg font-semibold text-slate-900">{title}</h2>
+          <h2 className="min-w-0 flex-1 truncate text-lg font-semibold text-slate-900">{title}</h2>
           <button
             type="button"
             onClick={onClose}

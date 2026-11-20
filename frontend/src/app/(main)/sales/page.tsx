@@ -38,7 +38,7 @@ export default function SalesPage() {
   return (
     <div>
       <PageHeader title="Sales" />
-      <div className="mb-4 grid gap-3 sm:grid-cols-3">
+      <div className="mb-4 grid gap-3 md:grid-cols-3">
         <Field label="From">
           <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
         </Field>

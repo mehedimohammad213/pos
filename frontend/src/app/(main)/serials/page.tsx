@@ -110,8 +110,8 @@ export default function SerialsPage() {
         <tbody>
           {rows.map((s) => (
             <tr key={s.id}>
-              <Td className="font-mono">{s.serial_number}</Td>
-              <Td>{s.product_name}</Td>
+              <Td className="max-w-[8rem] truncate font-mono sm:max-w-none">{s.serial_number}</Td>
+              <Td className="max-w-[10rem] truncate">{s.product_name}</Td>
               <Td>
                 <select
                   className="rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-800 focus:border-teal-500 focus:outline-none disabled:opacity-60"

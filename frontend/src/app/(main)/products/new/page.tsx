@@ -319,14 +319,14 @@ export default function NewProductPage() {
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
+      <div className="flex flex-col gap-2 rounded-xl border border-slate-200 bg-white px-4 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-5">
         <Link
           href="/products"
           className="inline-flex items-center gap-1.5 text-sm text-slate-500 transition hover:text-teal-700"
         >
           <span>←</span> Back to products
         </Link>
-        <p className="ml-auto max-w-md text-right text-sm text-slate-500">
+        <p className="w-full text-left text-sm text-slate-500 sm:ml-auto sm:max-w-md sm:text-right">
           Add products one by one — click a saved product to edit it in the side drawer
         </p>
       </div>
@@ -396,11 +396,11 @@ export default function NewProductPage() {
 
       <div ref={formTopRef} className="grid gap-6">
         {savedProducts.length > 0 ? (
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
             <h2 className="text-base font-semibold text-slate-900">
               Add another product (#{savedProducts.length + 1})
             </h2>
-            <span className="text-xs text-slate-500">
+            <span className="hidden text-xs text-slate-500 sm:inline">
               Click a saved product above to edit in the drawer
             </span>
           </div>

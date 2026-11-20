@@ -190,25 +190,28 @@ function CustomerDetailContent() {
           <thead>
             <tr>
               <Th>Invoice</Th>
-              <Th>Date</Th>
-              <Th>Type</Th>
+              <Th className="hidden sm:table-cell">Date</Th>
+              <Th className="hidden sm:table-cell">Type</Th>
               <Th>Total</Th>
-              <Th>Due</Th>
+              <Th className="hidden md:table-cell">Due</Th>
               <Th>Status</Th>
             </tr>
           </thead>
           <tbody>
             {(history?.sales || []).map((s) => (
               <tr key={s.id}>
-                <Td>
-                  <Link href={`/sales/${s.id}`} className="font-mono text-teal-700 hover:underline">
+                <Td className="max-w-[9rem]">
+                  <Link href={`/sales/${s.id}`} className="block truncate font-mono text-teal-700 hover:underline">
                     {s.invoice_no}
                   </Link>
+                  <span className="mt-0.5 block text-[11px] text-slate-500 sm:hidden">
+                    {formatDate(s.sale_date)} · {s.sale_type}
+                  </span>
                 </Td>
-                <Td>{formatDate(s.sale_date)}</Td>
-                <Td>{s.sale_type}</Td>
+                <Td className="hidden sm:table-cell">{formatDate(s.sale_date)}</Td>
+                <Td className="hidden sm:table-cell">{s.sale_type}</Td>
                 <Td className="font-mono">{formatBDT(s.total)}</Td>
-                <Td className="font-mono">{formatBDT(s.due_amount)}</Td>
+                <Td className="hidden font-mono md:table-cell">{formatBDT(s.due_amount)}</Td>
                 <Td>{s.payment_status || s.status}</Td>
               </tr>
             ))}
@@ -239,7 +242,9 @@ function CustomerDetailContent() {
                 <Td>{formatDateTime(e.created_at)}</Td>
                 <Td>{e.entry_type}</Td>
                 <Td className="font-mono">{formatBDT(e.amount)}</Td>
-                <Td className="text-slate-600">{e.description || e.notes || "—"}</Td>
+                <Td className="max-w-[12rem] truncate text-slate-600" title={e.description || e.notes || undefined}>
+                  {e.description || e.notes || "—"}
+                </Td>
               </tr>
             ))}
             {!history?.ledger?.length ? (

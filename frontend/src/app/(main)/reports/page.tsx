@@ -111,7 +111,11 @@ export default function ReportsPage() {
           {rows.map((row, i) => (
             <tr key={i}>
               {columns.map((c) => (
-                <Td key={c} className={typeof row[c] === "number" ? "font-mono" : ""}>
+                <Td
+                  key={c}
+                  className={`max-w-[12rem] truncate ${typeof row[c] === "number" ? "font-mono" : ""}`}
+                  title={String(row[c] ?? "")}
+                >
                   {typeof row[c] === "number" && String(c).includes("total") ? formatBDT(row[c]) : String(row[c] ?? "")}
                 </Td>
               ))}

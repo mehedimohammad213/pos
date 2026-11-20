@@ -340,11 +340,12 @@ export default function BulkProductUploadPage() {
                 ({importResult.createdCount} created, {importResult.updatedCount} updated).
               </p>
             </div>
-            <div className="flex gap-2">
-              <Btn variant="secondary" onClick={() => router.push("/products")}>
+            <div className="flex w-full flex-wrap gap-2 sm:w-auto">
+              <Btn variant="secondary" className="w-full sm:w-auto" onClick={() => router.push("/products")}>
                 View in catalog
               </Btn>
               <Btn
+                className="w-full sm:w-auto"
                 onClick={() => {
                   setImportResult(null);
                   clearFile();
@@ -627,8 +628,8 @@ export default function BulkProductUploadPage() {
             </div>
 
             {/* Filter buttons */}
-            <div className="flex items-center gap-2">
-              <div className="flex rounded-lg border border-slate-200 bg-slate-50 p-0.5 text-xs">
+            <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+              <div className="flex max-w-full flex-wrap rounded-lg border border-slate-200 bg-slate-50 p-0.5 text-xs">
                 <button
                   type="button"
                   className={`rounded-md px-2.5 py-1 font-medium transition ${
@@ -660,7 +661,7 @@ export default function BulkProductUploadPage() {
 
               <Input
                 placeholder="Filter preview…"
-                className="w-44 text-xs py-1"
+                className="w-full text-xs py-1 sm:w-44"
                 value={previewSearch}
                 onChange={(e) => setPreviewSearch(e.target.value)}
               />
@@ -669,14 +670,14 @@ export default function BulkProductUploadPage() {
 
           {/* Validation Alert Summary */}
           {errorRows.length > 0 ? (
-            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 flex items-center justify-between">
+            <div className="flex flex-col gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 sm:flex-row sm:items-center sm:justify-between">
               <span>
                 ⚠️ <strong>{errorRows.length}</strong> row(s) have validation issues and might fail unless corrected.
                 You can still proceed to import all valid rows ({validRows.length}).
               </span>
               <button
                 type="button"
-                className="underline font-semibold hover:text-amber-950"
+                className="shrink-0 underline font-semibold hover:text-amber-950"
                 onClick={() => setPreviewFilter("errors")}
               >
                 Inspect issues
@@ -688,18 +689,18 @@ export default function BulkProductUploadPage() {
           <TableWrap className="max-h-96">
             <thead>
               <tr>
-                <Th>#</Th>
+                <Th className="hidden sm:table-cell">#</Th>
                 <Th>Status</Th>
                 <Th>Product Name</Th>
-                <Th>SKU</Th>
-                <Th>Barcode</Th>
-                <Th>Category</Th>
-                <Th>Brand</Th>
+                <Th className="hidden md:table-cell">SKU</Th>
+                <Th className="hidden md:table-cell">Barcode</Th>
+                <Th className="hidden lg:table-cell">Category</Th>
+                <Th className="hidden lg:table-cell">Brand</Th>
                 <Th>Retail</Th>
-                <Th>Wholesale</Th>
-                {canSeeCost ? <Th>Cost</Th> : null}
-                <Th>Stock</Th>
-                <Th>Unit</Th>
+                <Th className="hidden lg:table-cell">Wholesale</Th>
+                {canSeeCost ? <Th className="hidden lg:table-cell">Cost</Th> : null}
+                <Th className="hidden sm:table-cell">Stock</Th>
+                <Th className="hidden lg:table-cell">Unit</Th>
                 <Th>Issues</Th>
               </tr>
             </thead>
@@ -711,7 +712,7 @@ export default function BulkProductUploadPage() {
                     key={row.rowNum}
                     className={hasErrors ? "bg-red-50/50 hover:bg-red-50" : "hover:bg-slate-50"}
                   >
-                    <Td className="font-mono text-xs text-slate-500">{row.rowNum}</Td>
+                    <Td className="hidden font-mono text-xs text-slate-500 sm:table-cell">{row.rowNum}</Td>
                     <Td>
                       {hasErrors ? (
                         <span className="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">
@@ -723,21 +724,26 @@ export default function BulkProductUploadPage() {
                         </span>
                       )}
                     </Td>
-                    <Td className="font-medium text-slate-900 max-w-xs truncate">{row.name || "—"}</Td>
-                    <Td className="font-mono text-xs text-slate-600">
+                    <Td className="max-w-[9rem] font-medium text-slate-900">
+                      <span className="block truncate">{row.name || "—"}</span>
+                      <span className="mt-0.5 block truncate font-mono text-[11px] text-slate-500 md:hidden">
+                        {row.sku || (autoGenerateSku ? "Auto SKU" : "—")}
+                      </span>
+                    </Td>
+                    <Td className="hidden max-w-[8rem] truncate font-mono text-xs text-slate-600 md:table-cell">
                       {row.sku || (autoGenerateSku ? <span className="text-slate-400 italic">Auto</span> : "—")}
                     </Td>
-                    <Td className="font-mono text-xs text-slate-600">
+                    <Td className="hidden max-w-[8rem] truncate font-mono text-xs text-slate-600 md:table-cell">
                       {row.barcode || (autoGenerateBarcode ? <span className="text-slate-400 italic">Auto</span> : "—")}
                     </Td>
-                    <Td className="text-xs text-slate-600">{row.category || "—"}</Td>
-                    <Td className="text-xs text-slate-600">{row.brand || "—"}</Td>
+                    <Td className="hidden text-xs text-slate-600 lg:table-cell">{row.category || "—"}</Td>
+                    <Td className="hidden text-xs text-slate-600 lg:table-cell">{row.brand || "—"}</Td>
                     <Td className="font-mono text-xs">{formatBDT(row.retail_price)}</Td>
-                    <Td className="font-mono text-xs">{formatBDT(row.wholesale_price)}</Td>
-                    {canSeeCost ? <Td className="font-mono text-xs">{formatBDT(row.cost)}</Td> : null}
-                    <Td className="font-mono text-xs font-semibold">{row.initial_qty}</Td>
-                    <Td className="text-xs text-slate-500">{row.unit}</Td>
-                    <Td className="text-xs text-red-600 max-w-xs">
+                    <Td className="hidden font-mono text-xs lg:table-cell">{formatBDT(row.wholesale_price)}</Td>
+                    {canSeeCost ? <Td className="hidden font-mono text-xs lg:table-cell">{formatBDT(row.cost)}</Td> : null}
+                    <Td className="hidden font-mono text-xs font-semibold sm:table-cell">{row.initial_qty}</Td>
+                    <Td className="hidden text-xs text-slate-500 lg:table-cell">{row.unit}</Td>
+                    <Td className="max-w-[8rem] truncate text-xs text-red-600" title={row.errors.join("; ")}>
                       {row.errors.length > 0 ? row.errors.join("; ") : "—"}
                     </Td>
                   </tr>
@@ -757,16 +763,16 @@ export default function BulkProductUploadPage() {
             <div className="text-sm text-slate-600">
               Ready to import <strong>{normalizedRows.length}</strong> product(s) ({validRows.length} valid)
             </div>
-            <div className="flex gap-2">
-              <Btn variant="secondary" onClick={clearFile} disabled={loading}>
+            <div className="flex w-full flex-wrap gap-2 sm:w-auto">
+              <Btn variant="secondary" className="w-full sm:w-auto" onClick={clearFile} disabled={loading}>
                 Reset
               </Btn>
               <Btn
                 disabled={loading || normalizedRows.length === 0 || !canManageProducts}
                 onClick={() => void executeImport()}
-                className="px-6 py-2.5 font-semibold shadow"
+                className="w-full px-6 py-2.5 font-semibold shadow sm:w-auto"
               >
-                {loading ? "Importing products…" : `🚀 Upload & Import ${normalizedRows.length} Products`}
+                {loading ? "Importing products…" : `Upload & Import ${normalizedRows.length}`}
               </Btn>
             </div>
           </div>
