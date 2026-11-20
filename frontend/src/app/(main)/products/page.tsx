@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { BarcodeInputs } from "@/components/BarcodeInputs";
+import { BarcodeScanner } from "@/components/BarcodeScanner";
 import { ProductLabelPrint, ProductLabelsPrint } from "@/components/ProductLabel";
 import { Alert, Btn, Field, Input, Modal, PageHeader, Pagination, Select, TableWrap, Td, Th } from "@/components/ui";
 import { api } from "@/lib/api";
@@ -45,10 +46,36 @@ export default function ProductsPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [error, setError] = useState("");
   const [msg, setMsg] = useState("");
+  const [scanOpen, setScanOpen] = useState(false);
+  const searchRef = useRef<HTMLInputElement>(null);
+  const modalOpen = scanOpen || open || !!adjust;
 
-  async function load(p = page) {
+  const focusSearch = useCallback(
+    (force = false) => {
+      if (modalOpen) return;
+      requestAnimationFrame(() => {
+        if (!force) {
+          const active = document.activeElement;
+          if (
+            active instanceof HTMLElement &&
+            active !== searchRef.current &&
+            (active.tagName === "INPUT" ||
+              active.tagName === "TEXTAREA" ||
+              active.tagName === "SELECT" ||
+              active.isContentEditable)
+          ) {
+            return;
+          }
+        }
+        searchRef.current?.focus();
+      });
+    },
+    [modalOpen]
+  );
+
+  const load = useCallback(async (p = 1, search = "") => {
     const qs = new URLSearchParams();
-    if (q) qs.set("q", q);
+    if (search) qs.set("q", search);
     qs.set("include_inactive", "1");
     qs.set("page", String(p));
     qs.set("limit", String(PAGE_SIZE));
@@ -57,19 +84,29 @@ export default function ProductsPage() {
     setTotal(data.total);
     setTotalPages(data.totalPages);
     setPage(data.page);
-  }
-
-  useEffect(() => {
-    void load(1);
-    void api<Category[]>("/catalog/categories").then(setCategories);
-    void api<Brand[]>("/catalog/brands").then(setBrands);
   }, []);
 
   useEffect(() => {
+    void load(1, "");
+    void api<Category[]>("/catalog/categories").then(setCategories);
+    void api<Brand[]>("/catalog/brands").then(setBrands);
+  }, [load]);
+
+  useEffect(() => {
     setPage(1);
-    const t = setTimeout(() => void load(1), 300);
+    const t = setTimeout(() => void load(1, q), 300);
     return () => clearTimeout(t);
-  }, [q]);
+  }, [q, load]);
+
+  useEffect(() => {
+    focusSearch(true);
+    const t1 = window.setTimeout(() => focusSearch(true), 50);
+    const t2 = window.setTimeout(() => focusSearch(true), 200);
+    return () => {
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+    };
+  }, [focusSearch]);
 
   useEffect(() => {
     setSelected((prev) => {
@@ -152,7 +189,7 @@ export default function ProductsPage() {
       setForm(emptyForm);
       setEditId(null);
       setMsg("Saved");
-      await load();
+      await load(page, q);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Save failed");
     }
@@ -169,7 +206,7 @@ export default function ProductsPage() {
       }),
     });
     setAdjust(null);
-    await load();
+    await load(page, q);
   }
 
   function startEdit(p: Product) {
@@ -190,10 +227,41 @@ export default function ProductsPage() {
     setOpen(true);
   }
 
+  async function handleSearch(code: string, { fromBarcode = false } = {}) {
+    const trimmed = code.trim();
+    if (!trimmed) return;
+    setError("");
+    setMsg("");
+    setQ(trimmed);
+    try {
+      const p = await api<Product>(`/catalog/products/barcode/${encodeURIComponent(trimmed)}`);
+      setRows([p]);
+      setTotal(1);
+      setTotalPages(1);
+      setPage(1);
+      setMsg(`Found: ${p.name}`);
+    } catch {
+      void load(1, trimmed);
+      if (fromBarcode) setError(`No product for barcode: ${trimmed}`);
+    }
+    focusSearch(true);
+  }
+
+  async function onSearchSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    await handleSearch(q, { fromBarcode: true });
+  }
+
   return (
     <div>
       <div className="no-print">
       <PageHeader title="Products">
+        <Btn variant="secondary" onClick={() => setScanOpen(true)} title="Scan barcode with camera into search">
+          Camera scan
+        </Btn>
+        <Btn variant="secondary" onClick={() => focusSearch(true)} title="Focus search for USB barcode wedge">
+          Barcode focus
+        </Btn>
         <Btn
           variant="secondary"
           onClick={printBarcodes}
@@ -213,17 +281,29 @@ export default function ProductsPage() {
       </PageHeader>
       {error ? <Alert tone="error">{error}</Alert> : null}
       {msg ? <Alert tone="success">{msg}</Alert> : null}
-      <div className="mb-4 flex flex-wrap items-center gap-3">
-        <Input className="max-w-md" placeholder="Search…" value={q} onChange={(e) => setQ(e.target.value)} />
+      <div className="mb-4 flex flex-wrap items-end gap-3">
+        <Field label="Search products" className="min-w-0 flex-1 sm:max-w-xl">
+          <form onSubmit={onSearchSubmit}>
+            <Input
+              ref={searchRef}
+              autoFocus
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Name, SKU, or scan barcode…"
+              className="text-base sm:text-lg"
+              autoComplete="off"
+            />
+          </form>
+        </Field>
         {selected.size > 0 ? (
-          <span className="text-sm text-slate-600">
+          <span className="pb-2 text-sm text-slate-600">
             {selected.size} selected
             <button type="button" className="ml-2 text-teal-700 hover:underline" onClick={() => setSelected(new Set())}>
               Clear
             </button>
           </span>
         ) : (
-          <span className="text-sm text-slate-500">Check products, then Print barcodes</span>
+          <span className="pb-2 text-sm text-slate-500">Check products, then Print barcodes</span>
         )}
       </div>
       <TableWrap>
@@ -303,7 +383,7 @@ export default function ProductsPage() {
         totalPages={totalPages}
         total={total}
         limit={PAGE_SIZE}
-        onPage={(p) => { setPage(p); void load(p); }}
+        onPage={(p) => { setPage(p); void load(p, q); }}
       />
       </div>
 
@@ -391,6 +471,18 @@ export default function ProductsPage() {
               Apply
             </Btn>
           </>
+        ) : null}
+      </Modal>
+
+      <Modal open={scanOpen} onClose={() => setScanOpen(false)} title="Camera barcode scan" wide>
+        {scanOpen ? (
+          <BarcodeScanner
+            onScan={(code) => {
+              setScanOpen(false);
+              void handleSearch(code, { fromBarcode: true });
+            }}
+            onClose={() => setScanOpen(false)}
+          />
         ) : null}
       </Modal>
 
