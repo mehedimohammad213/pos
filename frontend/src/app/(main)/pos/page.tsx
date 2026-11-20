@@ -334,6 +334,10 @@ export default function PosPage() {
           .filter((p) => Number(p.amount) > 0)
           .map((p) => ({ method: p.method, amount: Number(p.amount), reference: p.reference || undefined }));
       }
+      const soldQtyByProduct = new Map<string, number>();
+      for (const line of cart) {
+        soldQtyByProduct.set(line.product.id, (soldQtyByProduct.get(line.product.id) || 0) + line.quantity);
+      }
       const sale = await api<Sale>("/sales", { method: "POST", body: JSON.stringify(body) });
       // Clear the hold that was loaded into the cart (recall no longer voids it immediately).
       if (activeHoldId) {
@@ -345,7 +349,18 @@ export default function PosPage() {
         setActiveHoldId(null);
       }
       setSuccess(hold ? `Held as ${sale.invoice_no || sale.id}` : `Sale ${sale.invoice_no || sale.id} complete`);
-      if (!hold) setReceipt(sale);
+      if (!hold) {
+        setReceipt(sale);
+        // Stock is reduced only on completed sales (not holds) — update product cards immediately.
+        setProducts((prev) =>
+          prev.map((p) => {
+            const sold = soldQtyByProduct.get(p.id);
+            if (!sold) return p;
+            return { ...p, stock_qty: Math.max(0, Number(p.stock_qty ?? 0) - sold) };
+          })
+        );
+        void loadProducts(q);
+      }
       setCart([]);
       setDiscount("");
       setCustomer(null);
