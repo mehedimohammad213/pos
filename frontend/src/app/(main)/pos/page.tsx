@@ -797,39 +797,51 @@ function PaymentFields({
   return (
     <div className="space-y-2">
       {payments.map((p, i) => (
-        <div key={i} className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-          <Select
-            value={p.method}
-            onChange={(e) => {
-              const next = [...payments];
-              next[i] = { ...p, method: e.target.value };
-              setPayments(next);
-            }}
-          >
-            {PAYMENT_METHODS.map((m) => (
-              <option key={m} value={m}>
-                {m}
-              </option>
-            ))}
-          </Select>
-          <Input
-            placeholder="Amount"
-            value={p.amount}
-            onChange={(e) => {
-              const next = [...payments];
-              next[i] = { ...p, amount: e.target.value };
-              setPayments(next);
-            }}
-          />
-          <Input
-            placeholder="Ref"
-            value={p.reference}
-            onChange={(e) => {
-              const next = [...payments];
-              next[i] = { ...p, reference: e.target.value };
-              setPayments(next);
-            }}
-          />
+        <div key={i} className="flex flex-col gap-2 sm:flex-row sm:items-start">
+          <div className="grid min-w-0 flex-1 grid-cols-1 gap-2 sm:grid-cols-3">
+            <Select
+              value={p.method}
+              onChange={(e) => {
+                const next = [...payments];
+                next[i] = { ...p, method: e.target.value };
+                setPayments(next);
+              }}
+            >
+              {PAYMENT_METHODS.map((m) => (
+                <option key={m} value={m}>
+                  {m}
+                </option>
+              ))}
+            </Select>
+            <Input
+              placeholder="Amount"
+              value={p.amount}
+              onChange={(e) => {
+                const next = [...payments];
+                next[i] = { ...p, amount: e.target.value };
+                setPayments(next);
+              }}
+            />
+            <Input
+              placeholder="Ref"
+              value={p.reference}
+              onChange={(e) => {
+                const next = [...payments];
+                next[i] = { ...p, reference: e.target.value };
+                setPayments(next);
+              }}
+            />
+          </div>
+          {payments.length > 1 ? (
+            <Btn
+              variant="ghost"
+              className="shrink-0 px-2 text-red-600 sm:mt-1"
+              title="Remove this payment"
+              onClick={() => setPayments(payments.filter((_, j) => j !== i))}
+            >
+              ✕
+            </Btn>
+          ) : null}
         </div>
       ))}
       <Btn
