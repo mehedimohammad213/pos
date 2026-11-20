@@ -20,10 +20,24 @@ const BARCODE_FORMATS = [
   Html5QrcodeSupportedFormats.DATA_MATRIX,
 ];
 
+function safeQrBox(viewfinderWidth: number, viewfinderHeight: number) {
+  // html5-qrcode requires each qrbox edge >= 50px and within the viewfinder
+  const vw = Math.max(0, Math.floor(viewfinderWidth));
+  const vh = Math.max(0, Math.floor(viewfinderHeight));
+  if (vw < 50 || vh < 50) {
+    return { width: 50, height: 50 };
+  }
+  const width = Math.max(50, Math.min(260, Math.floor(vw * 0.85)));
+  const height = Math.max(50, Math.min(120, Math.floor(vh * 0.45)));
+  return {
+    width: Math.min(width, vw),
+    height: Math.min(height, vh),
+  };
+}
+
 const SCAN_CONFIG = {
   fps: 10,
-  // Fixed size — function-based qrbox can be 0x0 before video layout and fail start
-  qrbox: { width: 260, height: 120 },
+  qrbox: safeQrBox,
   disableFlip: false,
 };
 
@@ -186,13 +200,17 @@ export function BarcodeScanner({
 
     await safeStop();
 
-    // Let React paint the empty scanner host before Html5Qrcode looks it up
-    await new Promise<void>((resolve) => {
-      requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
-    });
-    if (runId !== runIdRef.current) return;
-
-    const host = document.getElementById(elementId);
+    // Wait until the scanner host has a usable layout (qrbox needs >= 50px)
+    let host: HTMLElement | null = null;
+    for (let i = 0; i < 20; i++) {
+      await new Promise<void>((resolve) => {
+        requestAnimationFrame(() => resolve());
+      });
+      if (runId !== runIdRef.current) return;
+      host = document.getElementById(elementId);
+      if (host && host.clientWidth >= 50 && host.clientHeight >= 50) break;
+      host = null;
+    }
     if (!host) {
       setError("Scanner view not ready. Tap Retry.");
       setStatus("error");
@@ -390,7 +408,7 @@ export function BarcodeScanner({
       <div className="relative overflow-hidden rounded-xl border border-slate-200 bg-slate-950">
         <div
           id={elementId}
-          className="hw-barcode-scanner min-h-[280px] w-full overflow-hidden [&_img]:hidden [&_video]:h-auto [&_video]:w-full [&_video]:object-cover"
+          className="hw-barcode-scanner min-h-[280px] min-w-[200px] w-full overflow-hidden [&_img]:hidden [&_video]:h-auto [&_video]:w-full [&_video]:object-cover"
         />
 
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">

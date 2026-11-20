@@ -45,8 +45,16 @@ export default function PosPage() {
   const [shop, setShop] = useState<ShopSettings | null>(null);
   const [receipt, setReceipt] = useState<Sale | null>(null);
   const [mobilePane, setMobilePane] = useState<"products" | "cart">("products");
+  const [scanTarget, setScanTarget] = useState<"barcode" | "search">("barcode");
   const barcodeRef = useRef<HTMLInputElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
+  const scanTargetRef = useRef<"barcode" | "search">("barcode");
   const modalOpen = scanOpen || !!serialModal || !!receipt || addCustomerOpen;
+
+  const selectScanTarget = useCallback((target: "barcode" | "search") => {
+    scanTargetRef.current = target;
+    setScanTarget(target);
+  }, []);
 
   const subtotal = cart.reduce((s, l) => s + l.unit_price * l.quantity - l.discount_amount, 0);
   const discountAmt = Number(discount) || 0;
@@ -70,14 +78,15 @@ export default function PosPage() {
     });
   }, [total]);
 
-  const focusBarcode = useCallback((force = false) => {
+  const focusScanField = useCallback((force = false) => {
     if (modalOpen) return;
     requestAnimationFrame(() => {
+      const targetEl = scanTargetRef.current === "search" ? searchRef.current : barcodeRef.current;
       if (!force) {
         const active = document.activeElement;
         if (
           active instanceof HTMLElement &&
-          active !== barcodeRef.current &&
+          active !== targetEl &&
           (active.tagName === "INPUT" ||
             active.tagName === "TEXTAREA" ||
             active.tagName === "SELECT" ||
@@ -86,9 +95,12 @@ export default function PosPage() {
           return;
         }
       }
-      barcodeRef.current?.focus();
+      targetEl?.focus();
     });
   }, [modalOpen]);
+
+  // Keep existing name used throughout the page
+  const focusBarcode = focusScanField;
 
   const loadProducts = useCallback(async (search: string) => {
     const qs = new URLSearchParams();
@@ -173,18 +185,44 @@ export default function PosPage() {
     focusBarcode(true);
   }
 
-  async function onBarcodeSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    const code = barcode.trim();
-    if (!code) return;
+  async function handleBarcodeScan(code: string) {
+    const trimmed = code.trim();
+    if (!trimmed) return;
+    setError("");
+    setQ(trimmed);
+    setMobilePane("products");
     try {
-      const p = await api<Product>(`/catalog/products/barcode/${encodeURIComponent(code)}`);
+      const p = await api<Product>(`/catalog/products/barcode/${encodeURIComponent(trimmed)}`);
+      setProducts((prev) => [p, ...prev.filter((x) => x.id !== p.id)].slice(0, 30));
       await addProduct(p);
       setBarcode("");
     } catch {
-      setError(`No product for barcode: ${code}`);
+      void loadProducts(trimmed);
+      setError(`No product for barcode: ${trimmed}`);
+      setBarcode("");
     }
     focusBarcode(true);
+  }
+
+  async function onBarcodeSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    await handleBarcodeScan(barcode);
+  }
+
+  /** Search field Enter: barcode lookup first, then name/SKU search (no error if text search). */
+  async function onSearchSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const term = q.trim();
+    if (!term) return;
+    setError("");
+    setMobilePane("products");
+    try {
+      const p = await api<Product>(`/catalog/products/barcode/${encodeURIComponent(term)}`);
+      setProducts((prev) => [p, ...prev.filter((x) => x.id !== p.id)].slice(0, 30));
+      await addProduct(p);
+    } catch {
+      void loadProducts(term);
+    }
   }
 
   async function searchCustomer() {
@@ -333,10 +371,18 @@ export default function PosPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-semibold text-slate-900 sm:text-2xl">Point of Sale</h1>
         <div className="flex flex-wrap gap-2">
-          <Btn variant="secondary" onClick={() => setScanOpen(true)}>
+          <Btn
+            variant="secondary"
+            onClick={() => setScanOpen(true)}
+            title={scanTarget === "search" ? "Scan into Search products" : "Scan into Barcode field"}
+          >
             Camera scan
           </Btn>
-          <Btn variant="secondary" onClick={() => focusBarcode(true)}>
+          <Btn
+            variant="secondary"
+            onClick={() => focusScanField(true)}
+            title={scanTarget === "search" ? "Focus Search products for USB barcode" : "Focus Barcode field for USB wedge"}
+          >
             Barcode focus
           </Btn>
         </div>
@@ -355,9 +401,13 @@ export default function PosPage() {
         setBarcode={setBarcode}
         onBarcodeSubmit={onBarcodeSubmit}
         barcodeRef={barcodeRef}
+        searchRef={searchRef}
         focusBarcode={focusBarcode}
+        selectScanTarget={selectScanTarget}
+        scanTarget={scanTarget}
         q={q}
         setQ={setQ}
+        onSearchSubmit={onSearchSubmit}
       />
 
       <div className="grid grid-cols-2 gap-2 rounded-xl border border-slate-200 bg-white p-1 lg:hidden">
@@ -474,10 +524,7 @@ export default function PosPage() {
           <BarcodeScanner
             onScan={(code) => {
               setScanOpen(false);
-              setBarcode(code);
-              void api<Product>(`/catalog/products/barcode/${encodeURIComponent(code)}`)
-                .then(addProduct)
-                .catch(() => setError("Product not found"));
+              void handleBarcodeScan(code);
             }}
             onClose={() => setScanOpen(false)}
           />
@@ -532,9 +579,13 @@ function PosTopBar(props: {
   setBarcode: (v: string) => void;
   onBarcodeSubmit: (e: React.FormEvent) => void;
   barcodeRef: React.RefObject<HTMLInputElement | null>;
+  searchRef: React.RefObject<HTMLInputElement | null>;
   focusBarcode: (force?: boolean) => void;
+  selectScanTarget: (target: "barcode" | "search") => void;
+  scanTarget: "barcode" | "search";
   q: string;
   setQ: (v: string) => void;
+  onSearchSubmit: (e: React.FormEvent) => void;
 }) {
   return (
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -560,8 +611,9 @@ function PosTopBar(props: {
             autoFocus
             value={props.barcode}
             onChange={(e) => props.setBarcode(e.target.value)}
+            onFocus={() => props.selectScanTarget("barcode")}
             placeholder="Scan or type…"
-            className="text-base sm:text-lg"
+            className={`text-base sm:text-lg ${props.scanTarget === "barcode" ? "ring-2 ring-teal-400" : ""}`}
             onBlur={() => {
               window.setTimeout(() => props.focusBarcode(), 0);
             }}
@@ -569,7 +621,16 @@ function PosTopBar(props: {
         </form>
       </Field>
       <Field label="Search products" className="sm:col-span-2 lg:col-span-1">
-        <Input value={props.q} onChange={(e) => props.setQ(e.target.value)} placeholder="Name, SKU…" className="text-base sm:text-lg" />
+        <form onSubmit={props.onSearchSubmit}>
+          <Input
+            ref={props.searchRef}
+            value={props.q}
+            onChange={(e) => props.setQ(e.target.value)}
+            onFocus={() => props.selectScanTarget("search")}
+            placeholder="Name, SKU, or scan barcode…"
+            className={`text-base sm:text-lg ${props.scanTarget === "search" ? "ring-2 ring-teal-400" : ""}`}
+          />
+        </form>
       </Field>
     </div>
   );
