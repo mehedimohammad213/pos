@@ -46,11 +46,32 @@ export default function PosPage() {
   const [receipt, setReceipt] = useState<Sale | null>(null);
   const [mobilePane, setMobilePane] = useState<"products" | "cart">("products");
   const barcodeRef = useRef<HTMLInputElement>(null);
+  const modalOpen = scanOpen || !!serialModal || !!receipt || addCustomerOpen;
 
   const subtotal = cart.reduce((s, l) => s + l.unit_price * l.quantity - l.discount_amount, 0);
   const discountAmt = Number(discount) || 0;
   const total = Math.max(0, subtotal - discountAmt);
   const paidTotal = payments.reduce((s, p) => s + (Number(p.amount) || 0), 0);
+
+  const focusBarcode = useCallback((force = false) => {
+    if (modalOpen) return;
+    requestAnimationFrame(() => {
+      if (!force) {
+        const active = document.activeElement;
+        if (
+          active instanceof HTMLElement &&
+          active !== barcodeRef.current &&
+          (active.tagName === "INPUT" ||
+            active.tagName === "TEXTAREA" ||
+            active.tagName === "SELECT" ||
+            active.isContentEditable)
+        ) {
+          return;
+        }
+      }
+      barcodeRef.current?.focus();
+    });
+  }, [modalOpen]);
 
   const loadProducts = useCallback(async (search: string) => {
     const qs = new URLSearchParams();
@@ -69,12 +90,60 @@ export default function PosPage() {
     void api<ShopSettings>("/shop").then(setShop).catch(() => setShop(null));
   }, []);
 
+  // Focus barcode as soon as the POS page is entered (and when modals close)
+  useEffect(() => {
+    focusBarcode(true);
+    const t1 = window.setTimeout(() => focusBarcode(true), 50);
+    const t2 = window.setTimeout(() => focusBarcode(true), 200);
+    return () => {
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+    };
+  }, [focusBarcode]);
+
+  useEffect(() => {
+    function isEditable(el: Element | null) {
+      if (!el || !(el instanceof HTMLElement)) return false;
+      if (el === barcodeRef.current) return true;
+      const tag = el.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return true;
+      return el.isContentEditable;
+    }
+
+    function restoreIfNeeded() {
+      if (modalOpen) return;
+      if (isEditable(document.activeElement)) return;
+      focusBarcode();
+    }
+
+    const onPointerUp = () => {
+      // After clicks on product cards / buttons, return focus to barcode
+      window.setTimeout(restoreIfNeeded, 0);
+    };
+    const onFocusIn = () => {
+      window.setTimeout(restoreIfNeeded, 0);
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") focusBarcode();
+    };
+
+    document.addEventListener("pointerup", onPointerUp);
+    document.addEventListener("focusin", onFocusIn);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      document.removeEventListener("pointerup", onPointerUp);
+      document.removeEventListener("focusin", onFocusIn);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [focusBarcode, modalOpen]);
+
   async function addProduct(p: Product) {
     const price =
       saleType === "wholesale" && p.wholesale_price != null ? Number(p.wholesale_price) : Number(p.retail_price);
-  const existing = cart.find((c) => c.product.id === p.id);
+    const existing = cart.find((c) => c.product.id === p.id);
     if (existing && !p.serial_required) {
       setCart(cart.map((c) => (c.product.id === p.id ? { ...c, quantity: c.quantity + 1 } : c)));
+      focusBarcode(true);
       return;
     }
     if (p.serial_required) {
@@ -84,6 +153,7 @@ export default function PosPage() {
       return;
     }
     setCart([...cart, { product: p, quantity: 1, unit_price: price, discount_amount: 0, serial_ids: [] }]);
+    focusBarcode(true);
   }
 
   async function onBarcodeSubmit(e: React.FormEvent) {
@@ -97,7 +167,7 @@ export default function PosPage() {
     } catch {
       setError(`No product for barcode: ${code}`);
     }
-    barcodeRef.current?.focus();
+    focusBarcode(true);
   }
 
   async function searchCustomer() {
@@ -204,6 +274,7 @@ export default function PosPage() {
       setCustomerNotFound(false);
       setPayments([{ method: "cash", amount: "", reference: "" }]);
       if (hold) void api<Sale[]>("/sales/held").then(setHeld);
+      if (hold) focusBarcode(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Sale failed");
     }
@@ -237,6 +308,7 @@ export default function PosPage() {
     ]);
     setMobilePane("cart");
     setSerialModal(null);
+    focusBarcode(true);
   }
 
   return (
@@ -247,7 +319,7 @@ export default function PosPage() {
           <Btn variant="secondary" onClick={() => setScanOpen(true)}>
             Camera scan
           </Btn>
-          <Btn variant="secondary" onClick={() => barcodeRef.current?.focus()}>
+          <Btn variant="secondary" onClick={() => focusBarcode(true)}>
             Barcode focus
           </Btn>
         </div>
@@ -266,6 +338,7 @@ export default function PosPage() {
         setBarcode={setBarcode}
         onBarcodeSubmit={onBarcodeSubmit}
         barcodeRef={barcodeRef}
+        focusBarcode={focusBarcode}
         q={q}
         setQ={setQ}
       />
@@ -442,6 +515,7 @@ function PosTopBar(props: {
   setBarcode: (v: string) => void;
   onBarcodeSubmit: (e: React.FormEvent) => void;
   barcodeRef: React.RefObject<HTMLInputElement | null>;
+  focusBarcode: (force?: boolean) => void;
   q: string;
   setQ: (v: string) => void;
 }) {
@@ -466,10 +540,14 @@ function PosTopBar(props: {
         <form onSubmit={props.onBarcodeSubmit}>
           <Input
             ref={props.barcodeRef}
+            autoFocus
             value={props.barcode}
             onChange={(e) => props.setBarcode(e.target.value)}
             placeholder="Scan or type…"
             className="text-base sm:text-lg"
+            onBlur={() => {
+              window.setTimeout(() => props.focusBarcode(), 0);
+            }}
           />
         </form>
       </Field>
