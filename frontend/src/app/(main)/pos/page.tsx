@@ -588,24 +588,23 @@ function PosProductGrid({
   addProduct: (p: Product) => void;
   saleType: string;
 }) {
+  // ~10 products visible (5 rows × 2 cols); remaining scroll
   return (
-    <div>
-      <div className="grid max-h-[min(60vh,520px)] gap-2 overflow-y-auto sm:grid-cols-2 lg:max-h-[420px]">
-        {products.map((p) => (
-          <button
-            key={p.id}
-            type="button"
-            onClick={() => void addProduct(p)}
-            className="rounded-xl border border-slate-200 bg-white p-3 text-left shadow-sm transition hover:border-teal-400 active:scale-[0.98] sm:p-4"
-          >
-            <p className="font-medium leading-snug">{p.name}</p>
-            <p className="font-mono text-base text-teal-700 sm:text-lg">
-              {formatBDT(saleType === "wholesale" ? p.wholesale_price ?? p.retail_price : p.retail_price)}
-            </p>
-            <p className="text-xs text-slate-500">Stock: {Number(p.stock_qty ?? 0)}</p>
-          </button>
-        ))}
-      </div>
+    <div className="grid max-h-[34rem] content-start gap-2 overflow-y-auto sm:grid-cols-2">
+      {products.map((p) => (
+        <button
+          key={p.id}
+          type="button"
+          onClick={() => void addProduct(p)}
+          className="rounded-xl border border-slate-200 bg-white p-3 text-left shadow-sm transition hover:border-teal-400 active:scale-[0.98] sm:p-4"
+        >
+          <p className="font-medium leading-snug">{p.name}</p>
+          <p className="font-mono text-base text-teal-700 sm:text-lg">
+            {formatBDT(saleType === "wholesale" ? p.wholesale_price ?? p.retail_price : p.retail_price)}
+          </p>
+          <p className="text-xs text-slate-500">Stock: {Number(p.stock_qty ?? 0)}</p>
+        </button>
+      ))}
     </div>
   );
 }
