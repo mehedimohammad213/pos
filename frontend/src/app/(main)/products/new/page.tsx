@@ -116,7 +116,6 @@ export default function NewProductPage() {
   const scannerRef = useRef<HTMLInputElement>(null);
   const formTopRef = useRef<HTMLDivElement>(null);
 
-  const [openCameraRequest, setOpenCameraRequest] = useState(0);
   const [form, setForm] = useState<ProductForm>(defaultProduct);
   const [categories, setCategories] = useState<Category[]>([]);
   const [brands, setBrands] = useState<Brand[]>([]);
@@ -297,58 +296,16 @@ export default function NewProductPage() {
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
-      <div>
+      <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
         <Link
           href="/products"
           className="inline-flex items-center gap-1.5 text-sm text-slate-500 transition hover:text-teal-700"
         >
           <span>←</span> Back to products
         </Link>
-        <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">New Product</h1>
-            <p className="text-sm text-slate-500">
-              Add products one by one — click a saved product to edit it in the side drawer
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Btn
-              type="button"
-              variant="secondary"
-              onClick={() => setOpenCameraRequest((n) => n + 1)}
-              className="border-teal-500 bg-teal-50 text-teal-800 font-medium hover:bg-teal-100"
-            >
-              Camera scan
-            </Btn>
-            <Btn
-              type="button"
-              variant="secondary"
-              onClick={focusBarcodeScanner}
-              className="border-teal-500 bg-teal-50 text-teal-800 font-medium hover:bg-teal-100"
-            >
-              Barcode focus
-            </Btn>
-            <Link href="/products/import">
-              <Btn type="button" variant="secondary" title="Import multiple products at once via CSV">
-                Bulk upload
-              </Btn>
-            </Link>
-            <Btn
-              type="button"
-              variant="secondary"
-              onClick={() => router.push("/products")}
-            >
-              {savedProducts.length > 0 ? "Done" : "Cancel"}
-            </Btn>
-            <Btn
-              type="button"
-              disabled={loading || !canManageProducts}
-              onClick={() => void addProduct()}
-            >
-              {loading ? "Saving…" : "Add Product"}
-            </Btn>
-          </div>
-        </div>
+        <p className="ml-auto max-w-md text-right text-sm text-slate-500">
+          Add products one by one — click a saved product to edit it in the side drawer
+        </p>
       </div>
 
       {error ? <Alert tone="error">{error}</Alert> : null}
@@ -415,25 +372,22 @@ export default function NewProductPage() {
       ) : null}
 
       <div ref={formTopRef} className="grid gap-6">
-        <div className="flex items-center justify-between">
-          <h2 className="text-base font-semibold text-slate-900">
-            {savedProducts.length > 0
-              ? `Add another product (#${savedProducts.length + 1})`
-              : "Product details"}
-          </h2>
-          {savedProducts.length > 0 ? (
+        {savedProducts.length > 0 ? (
+          <div className="flex items-center justify-between">
+            <h2 className="text-base font-semibold text-slate-900">
+              Add another product (#{savedProducts.length + 1})
+            </h2>
             <span className="text-xs text-slate-500">
               Click a saved product above to edit in the drawer
             </span>
-          ) : null}
-        </div>
+          </div>
+        ) : null}
 
         <Card className="p-5">
           <BarcodeInputs
             barcode={form.barcode}
             onChange={(val) => setForm((prev) => ({ ...prev, barcode: val }))}
             scannerRef={scannerRef}
-            openCameraRequest={openCameraRequest}
           />
         </Card>
 
