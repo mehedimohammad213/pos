@@ -116,3 +116,43 @@ export async function apiText(path: string, options?: RequestInit): Promise<stri
   if (!res.ok) throw new ApiError(res.statusText, res.status);
   return res.text();
 }
+
+/** Resolve relative /uploads paths for display. */
+export function mediaUrl(path?: string | null): string {
+  if (!path) return "";
+  if (path.startsWith("http://") || path.startsWith("https://") || path.startsWith("data:")) return path;
+  if (typeof window !== "undefined") {
+    return `${window.location.origin}${path.startsWith("/") ? path : `/${path}`}`;
+  }
+  return path.startsWith("/") ? path : `/${path}`;
+}
+
+export async function uploadImage(file: File): Promise<{ url: string }> {
+  const form = new FormData();
+  form.append("file", file);
+  const headers = new Headers();
+  const token = getAccessToken();
+  if (token) headers.set("Authorization", `Bearer ${token}`);
+  const res = await fetch(`${getApiBaseUrl()}/api/uploads`, { method: "POST", headers, body: form });
+  if (!res.ok) {
+    let message = res.statusText;
+    try {
+      const body = await res.json();
+      message = body.message || body.error || message;
+    } catch {
+      /* ignore */
+    }
+    throw new ApiError(message, res.status);
+  }
+  return res.json() as Promise<{ url: string }>;
+}
+
+export function downloadBlob(text: string, filename: string, mime = "text/csv") {
+  const blob = new Blob([text], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}

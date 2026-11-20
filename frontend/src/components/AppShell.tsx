@@ -24,6 +24,7 @@ const NAV: NavItem[] = [
   { href: "/purchases", label: "Purchases", icon: "↙" },
   { href: "/customers", label: "Customers", icon: "◎" },
   { href: "/sales", label: "Sales", icon: "₪" },
+  { href: "/exchanges", label: "Exchange", icon: "⇄", permission: "walkin_exchange" },
   { href: "/installments", label: "Installments", icon: "≡" },
   { href: "/warranty", label: "Warranty", icon: "✓" },
   { href: "/expenses", label: "Expenses", icon: "−" },

@@ -37,15 +37,29 @@ router.get('/profit', authRequired, requirePermission('see_cost'), async (req, r
   try {
     const from = (req.query.from as string) || new Date().toISOString().slice(0, 10);
     const to = (req.query.to as string) || from;
-    res.json(await reports.profitReport(from, to));
+    const row = await reports.profitReport(from, to);
+    const rows = [row as Record<string, unknown>];
+    if (req.query.format === 'csv') {
+      res.setHeader('Content-Type', 'text/csv');
+      res.send(reports.toCsv(rows));
+      return;
+    }
+    res.json(rows);
   } catch (e) {
     next(e);
   }
 });
 
-router.get('/stock-valuation', authRequired, requirePermission('see_cost'), async (_req, res, next) => {
+router.get('/stock-valuation', authRequired, requirePermission('see_cost'), async (req, res, next) => {
   try {
-    res.json(await reports.stockValuation());
+    const data = await reports.stockValuation();
+    const rows = Array.isArray(data) ? data : [data];
+    if (req.query.format === 'csv') {
+      res.setHeader('Content-Type', 'text/csv');
+      res.send(reports.toCsv(rows as Record<string, unknown>[]));
+      return;
+    }
+    res.json(data);
   } catch (e) {
     next(e);
   }
@@ -55,7 +69,14 @@ router.get('/exchanges', authRequired, async (req, res, next) => {
   try {
     const from = (req.query.from as string) || new Date().toISOString().slice(0, 10);
     const to = (req.query.to as string) || from;
-    res.json(await reports.exchangesSummary(from, to));
+    const row = await reports.exchangesSummary(from, to);
+    const rows = [row as Record<string, unknown>];
+    if (req.query.format === 'csv') {
+      res.setHeader('Content-Type', 'text/csv');
+      res.send(reports.toCsv(rows));
+      return;
+    }
+    res.json(rows);
   } catch (e) {
     next(e);
   }
@@ -68,6 +89,11 @@ router.get('/audit', authRequired, requirePermission('manage_users'), async (req
        LEFT JOIN users u ON u.id = a.user_id
        ORDER BY a.created_at DESC LIMIT 200`
     );
+    if (req.query.format === 'csv') {
+      res.setHeader('Content-Type', 'text/csv');
+      res.send(reports.toCsv(r.rows as Record<string, unknown>[]));
+      return;
+    }
     res.json(r.rows);
   } catch (e) {
     next(e);

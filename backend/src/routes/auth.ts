@@ -65,7 +65,17 @@ router.post('/users', authRequired, requirePermission('manage_users'), async (re
 
 router.patch('/users/:id', authRequired, requirePermission('manage_users'), async (req, res, next) => {
   try {
-    res.json(await authService.updateUser(param(req.params.id), req.body));
+    const body = z
+      .object({
+        name: z.string().min(1).optional(),
+        phone: z.string().optional().nullable(),
+        role: z.enum(['admin', 'manager', 'cashier', 'stock']).optional(),
+        permissions: z.record(z.string(), z.boolean()).optional(),
+        is_active: z.boolean().optional(),
+        password: z.string().min(6).optional(),
+      })
+      .parse(req.body);
+    res.json(await authService.updateUser(param(req.params.id), body));
   } catch (e) {
     next(e);
   }

@@ -10,3 +10,5 @@ dist/
 *.log
 backup.sql
 .DS_Store
+backend/uploads/*
+!backend/uploads/.gitkeep

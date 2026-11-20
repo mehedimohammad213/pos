@@ -44,6 +44,7 @@ export type Product = {
   tax_percent?: number | string;
   is_active?: boolean;
   unit?: string;
+  image_url?: string;
 };
 
 export interface BulkImportRowError {
@@ -82,8 +83,22 @@ export type Customer = {
   phone: string;
   email?: string;
   address?: string;
+  nid?: string;
   credit_limit?: number | string;
   due_balance?: number | string;
+};
+
+export type LedgerEntry = {
+  id: string;
+  customer_id: string;
+  entry_type: string;
+  amount: number | string;
+  balance_after?: number | string;
+  description?: string;
+  notes?: string;
+  sale_id?: string;
+  payment_id?: string;
+  created_at: string;
 };
 
 export type SaleLine = {
@@ -130,6 +145,11 @@ export type Sale = {
   is_backdated?: boolean;
   created_at?: string;
   tax_amount?: number | string;
+};
+
+export type CustomerHistory = {
+  sales: Sale[];
+  ledger: LedgerEntry[];
 };
 
 export type Supplier = {

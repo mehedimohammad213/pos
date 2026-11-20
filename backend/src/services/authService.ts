@@ -118,7 +118,7 @@ export async function listUsers() {
 
 export async function updateUser(
   id: string,
-  input: Partial<{ name: string; phone: string; role: string; permissions: Record<string, boolean>; is_active: boolean; password: string }>
+  input: Partial<{ name: string; phone: string | null; role: string; permissions: Record<string, boolean>; is_active: boolean; password: string }>
 ) {
   const fields: string[] = [];
   const values: unknown[] = [];

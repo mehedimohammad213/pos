@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { BarcodeInputs } from "@/components/BarcodeInputs";
 import { Alert, Btn, Card, Drawer, Field, Input, Modal, Select } from "@/components/ui";
-import { api } from "@/lib/api";
+import { api, mediaUrl, uploadImage } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import type { Brand, Category, Product } from "@/lib/types";
 
@@ -23,6 +23,7 @@ const defaultProduct = {
   initial_qty: "0",
   warranty_months: "0",
   serial_required: false,
+  image_url: "",
 };
 
 type ProductForm = typeof defaultProduct;
@@ -89,6 +90,7 @@ function buildCreateBody(form: ProductForm) {
     reorder_level: Number(form.reorder_level) || 0,
     warranty_months: Number(form.warranty_months) || 0,
     serial_required: form.serial_required,
+    image_url: form.image_url.trim() || undefined,
     initial_qty: Number(form.initial_qty) || 0,
   };
 }
@@ -107,6 +109,7 @@ function buildUpdateBody(form: ProductForm) {
     reorder_level: Number(form.reorder_level) || 0,
     warranty_months: Number(form.warranty_months) || 0,
     serial_required: form.serial_required,
+    image_url: form.image_url.trim() || null,
   };
 }
 
@@ -133,6 +136,26 @@ export default function NewProductPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [drawerError, setDrawerError] = useState("");
+  const [uploadingImage, setUploadingImage] = useState(false);
+
+  async function handleImageUpload(file: File | null, target: "create" | "edit") {
+    if (!file) return;
+    setUploadingImage(true);
+    try {
+      const { url } = await uploadImage(file);
+      if (target === "create") {
+        setForm((prev) => ({ ...prev, image_url: url }));
+      } else if (editingId) {
+        updateSavedForm(editingId, { image_url: url });
+      }
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "Image upload failed";
+      if (target === "create") setError(message);
+      else setDrawerError(message);
+    } finally {
+      setUploadingImage(false);
+    }
+  }
 
   const canManageProducts =
     user?.role === "admin" || user?.role === "manager" || user?.role === "stock";
@@ -584,6 +607,34 @@ export default function NewProductPage() {
               </div>
             </label>
           </div>
+
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <Field label="Image URL">
+              <Input
+                value={form.image_url}
+                onChange={(e) => setForm({ ...form, image_url: e.target.value })}
+                placeholder="/uploads/… or https://…"
+              />
+            </Field>
+            <div className="flex flex-wrap items-end gap-3">
+              <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-slate-700">
+                <span className="rounded-lg border border-slate-300 bg-white px-3 py-2">
+                  {uploadingImage ? "Uploading…" : "Upload image"}
+                </span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  disabled={uploadingImage}
+                  onChange={(e) => void handleImageUpload(e.target.files?.[0] || null, "create")}
+                />
+              </label>
+              {form.image_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={mediaUrl(form.image_url)} alt="" className="h-14 w-14 rounded object-cover" />
+              ) : null}
+            </div>
+          </div>
         </Card>
 
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -847,6 +898,38 @@ export default function NewProductPage() {
                 </p>
               </div>
             </label>
+
+            <Field label="Image URL">
+              <Input
+                value={editingEntry.form.image_url}
+                onChange={(e) =>
+                  updateSavedForm(editingEntry.product.id, { image_url: e.target.value })
+                }
+                placeholder="/uploads/… or https://…"
+              />
+            </Field>
+            <div className="flex flex-wrap items-center gap-3">
+              <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-slate-700">
+                <span className="rounded-lg border border-slate-300 bg-white px-3 py-2">
+                  {uploadingImage ? "Uploading…" : "Upload image"}
+                </span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  disabled={uploadingImage}
+                  onChange={(e) => void handleImageUpload(e.target.files?.[0] || null, "edit")}
+                />
+              </label>
+              {editingEntry.form.image_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={mediaUrl(editingEntry.form.image_url)}
+                  alt=""
+                  className="h-14 w-14 rounded object-cover"
+                />
+              ) : null}
+            </div>
           </div>
         ) : null}
       </Drawer>

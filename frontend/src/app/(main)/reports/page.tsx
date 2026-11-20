@@ -1,17 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { api, apiText } from "@/lib/api";
+import { api, apiText, downloadBlob } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { Alert, Btn, Field, Input, PageHeader, Select, TableWrap, Td, Th } from "@/components/ui";
 import { formatBDT } from "@/lib/format";
 import { useTodayState } from "@/lib/use-client-date";
 
 type ReportRow = Record<string, string | number>;
+type ReportKind = "sales" | "profit" | "stock-valuation" | "exchanges" | "audit";
 
 export default function ReportsPage() {
   const { canSeeCost, hasPermission } = useAuth();
-  const [kind, setKind] = useState<"sales" | "profit" | "stock-valuation" | "exchanges" | "audit">("sales");
+  const [kind, setKind] = useState<ReportKind>("sales");
   const [from, setFrom] = useTodayState();
   const [to, setTo] = useTodayState();
   const [groupBy, setGroupBy] = useState("product");
@@ -46,16 +47,14 @@ export default function ReportsPage() {
   }, [kind, from, to, groupBy]);
 
   async function downloadCsv() {
-    if (kind !== "sales") return;
-    const qs = new URLSearchParams({ from, to, group_by: groupBy, format: "csv" });
-    const text = await apiText(`/reports/sales?${qs}`);
-    const blob = new Blob([text], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `sales-${from}-${to}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    const qs = new URLSearchParams({ format: "csv" });
+    if (kind !== "stock-valuation" && kind !== "audit") {
+      qs.set("from", from);
+      qs.set("to", to);
+    }
+    if (kind === "sales") qs.set("group_by", groupBy);
+    const text = await apiText(`/reports/${kind}?${qs}`);
+    downloadBlob(text, `${kind}-${from || "all"}-${to || "all"}.csv`);
   }
 
   const columns = rows[0] ? Object.keys(rows[0]) : [];
@@ -63,16 +62,14 @@ export default function ReportsPage() {
   return (
     <div>
       <PageHeader title="Reports">
-        {kind === "sales" ? (
-          <Btn variant="secondary" onClick={() => void downloadCsv()}>
-            Download CSV
-          </Btn>
-        ) : null}
+        <Btn variant="secondary" onClick={() => void downloadCsv()}>
+          Download CSV
+        </Btn>
       </PageHeader>
       {error ? <Alert tone="error">{error}</Alert> : null}
       <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         <Field label="Report">
-          <Select value={kind} onChange={(e) => setKind(e.target.value as typeof kind)}>
+          <Select value={kind} onChange={(e) => setKind(e.target.value as ReportKind)}>
             <option value="sales">Sales</option>
             {canSeeCost ? <option value="profit">Profit</option> : null}
             {canSeeCost ? <option value="stock-valuation">Stock valuation</option> : null}

@@ -17,10 +17,15 @@ import expenseRoutes from './routes/expenses';
 import reportRoutes from './routes/reports';
 import shiftRoutes from './routes/shifts';
 import documentsRoutes from './routes/documents';
+import uploadRoutes, { uploadsDir } from './routes/uploads';
 
 export function createApp() {
   const app = express();
-  app.use(helmet());
+  app.use(
+    helmet({
+      crossOriginResourcePolicy: { policy: 'cross-origin' },
+    })
+  );
   app.use(cors({ origin: config.corsOrigin, credentials: true }));
   app.use(express.json({ limit: '2mb' }));
   app.use(morgan(config.nodeEnv === 'production' ? 'combined' : 'dev'));
@@ -37,6 +42,8 @@ export function createApp() {
     res.json({ ok: true, service: 'hardware-pos-api', time: new Date().toISOString() });
   });
 
+  app.use('/uploads', express.static(uploadsDir));
+  app.use('/api/uploads', uploadRoutes);
   app.use('/api/auth', authRoutes);
   app.use('/api/shop', shopRoutes);
   app.use('/api/catalog', catalogRoutes);

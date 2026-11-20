@@ -2,10 +2,10 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { api } from "@/lib/api";
+import { api, downloadBlob } from "@/lib/api";
 import type { PurchaseDemand, Supplier } from "@/lib/types";
 import { Alert, Btn, Field, Input, PageHeader, Select, TableWrap, Td, Th } from "@/components/ui";
-import { formatBDT } from "@/lib/format";
+import { formatBDT, formatDate } from "@/lib/format";
 
 const STATUSES = ["draft", "ordered", "partially_received", "received", "cancelled"];
 
@@ -53,7 +53,7 @@ function DemandDetailContent() {
         quantity: item.requested_qty,
         unit_cost: Number(costs[item.product_id] || item.last_cost || 0),
       }));
-      const purchase = await api<{ id: string }>("/purchases", {
+      await api<{ id: string }>("/purchases", {
         method: "POST",
         body: JSON.stringify({
           demand_id: id,
@@ -63,11 +63,31 @@ function DemandDetailContent() {
         }),
       });
       setConvertOpen(false);
-      setMsg(`Purchase ${purchase.id.slice(0, 8)} created`);
+      setMsg("Purchase created");
       router.push("/purchases");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Convert failed");
     }
+  }
+
+  function exportCsv() {
+    if (!demand) return;
+    const lines = [
+      ["demand_no", "date", "status", "supplier", "product", "qty", "last_cost", "notes"].join(","),
+      ...(demand.items || []).map((item) =>
+        [
+          demand.demand_no || "",
+          demand.demand_date || "",
+          demand.status,
+          demand.supplier_name || "",
+          `"${(item.product_name || item.product_id).replace(/"/g, '""')}"`,
+          item.requested_qty,
+          item.last_cost ?? "",
+          `"${(demand.notes || "").replace(/"/g, '""')}"`,
+        ].join(",")
+      ),
+    ];
+    downloadBlob(lines.join("\n"), `demand-${demand.demand_no || id}.csv`);
   }
 
   if (!demand) return <p className="text-slate-500">Loading…</p>;
@@ -77,11 +97,39 @@ function DemandDetailContent() {
   return (
     <div>
       <PageHeader title={`Demand ${demand.demand_no || id.slice(0, 8)}`}>
-        {canConvert ? <Btn onClick={() => setConvertOpen(true)}>Convert to purchase</Btn> : null}
+        <Btn variant="secondary" className="no-print" onClick={() => exportCsv()}>
+          Export CSV
+        </Btn>
+        <Btn variant="secondary" className="no-print" onClick={() => window.print()}>
+          Print
+        </Btn>
+        {canConvert ? (
+          <Btn className="no-print" onClick={() => setConvertOpen(true)}>
+            Convert to purchase
+          </Btn>
+        ) : null}
       </PageHeader>
       {msg ? <Alert tone="success">{msg}</Alert> : null}
       {error ? <Alert tone="error">{error}</Alert> : null}
-      <div className="mb-4 flex flex-wrap items-end gap-3">
+
+      <div className="demand-print mb-4 space-y-1 text-sm">
+        <p>
+          <span className="text-slate-500">Date:</span> {formatDate(demand.demand_date || demand.created_at)}
+        </p>
+        <p>
+          <span className="text-slate-500">Status:</span> {demand.status}
+        </p>
+        <p>
+          <span className="text-slate-500">Supplier:</span> {demand.supplier_name || "—"}
+        </p>
+        {demand.notes ? (
+          <p>
+            <span className="text-slate-500">Notes:</span> {demand.notes}
+          </p>
+        ) : null}
+      </div>
+
+      <div className="no-print mb-4 flex flex-wrap items-end gap-3">
         <Field label="Status">
           <Select value={status} onChange={(e) => setStatus(e.target.value)}>
             {STATUSES.map((s) => (
@@ -93,7 +141,7 @@ function DemandDetailContent() {
         </Field>
         <Btn onClick={() => void saveStatus()}>Update status</Btn>
       </div>
-      {demand.notes ? <p className="mb-4 text-sm text-slate-600">{demand.notes}</p> : null}
+
       <TableWrap>
         <thead>
           <tr>
@@ -114,7 +162,7 @@ function DemandDetailContent() {
       </TableWrap>
 
       {convertOpen ? (
-        <div className="mt-6 rounded-xl border border-slate-200 bg-white p-5">
+        <div className="no-print mt-6 rounded-xl border border-slate-200 bg-white p-5">
           <h3 className="font-semibold">Create purchase from demand</h3>
           <Field label="Supplier">
             <Select value={supplierId} onChange={(e) => setSupplierId(e.target.value)}>

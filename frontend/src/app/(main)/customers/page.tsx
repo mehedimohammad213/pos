@@ -1,9 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import type { Customer, PaginatedResponse } from "@/lib/types";
-import { Alert, Btn, Field, Input, Modal, PageHeader, Pagination, TableWrap, Td, Th } from "@/components/ui";
+import type { Customer, PaginatedResponse, Sale } from "@/lib/types";
+import { Alert, Btn, Field, Input, Modal, PageHeader, Pagination, Select, TableWrap, Td, Th } from "@/components/ui";
 import { formatBDT } from "@/lib/format";
 
 type AgingRow = {
@@ -17,19 +18,24 @@ type AgingRow = {
   d90_plus?: number;
 };
 
+const emptyForm = { name: "", phone: "", address: "", nid: "", credit_limit: "" };
+
 export default function CustomersPage() {
   const [rows, setRows] = useState<Customer[]>([]);
   const [aging, setAging] = useState<AgingRow[]>([]);
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
   const [collect, setCollect] = useState<Customer | null>(null);
-  const [form, setForm] = useState({ name: "", phone: "", address: "" });
+  const [openInvoices, setOpenInvoices] = useState<Sale[]>([]);
+  const [allocations, setAllocations] = useState<Record<string, string>>({});
+  const [form, setForm] = useState(emptyForm);
   const [pay, setPay] = useState({ amount: "", method: "cash", notes: "" });
   const [error, setError] = useState("");
   const [showAging, setShowAging] = useState(false);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
+  const [saving, setSaving] = useState(false);
   const PAGE_SIZE = 20;
 
   async function load(p = page) {
@@ -53,26 +59,67 @@ export default function CustomersPage() {
   }, []);
 
   async function save() {
+    setError("");
+    setSaving(true);
     try {
-      await api("/customers", { method: "POST", body: JSON.stringify(form) });
+      await api("/customers", {
+        method: "POST",
+        body: JSON.stringify({
+          name: form.name.trim(),
+          phone: form.phone.trim(),
+          address: form.address.trim() || undefined,
+          nid: form.nid.trim() || undefined,
+          credit_limit: form.credit_limit ? Number(form.credit_limit) : 0,
+        }),
+      });
       setOpen(false);
-      setForm({ name: "", phone: "", address: "" });
+      setForm(emptyForm);
       await load(page);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed");
+    } finally {
+      setSaving(false);
     }
+  }
+
+  async function openCollect(c: Customer) {
+    setCollect(c);
+    setPay({ amount: String(c.due_balance || ""), method: "cash", notes: "" });
+    setAllocations({});
+    setError("");
+    try {
+      const hist = await api<{ sales: Sale[] }>(`/customers/${c.id}/history`);
+      const dues = (hist.sales || []).filter((s) => Number(s.due_amount || 0) > 0 && s.status === "completed");
+      setOpenInvoices(dues);
+      const init: Record<string, string> = {};
+      for (const s of dues) init[s.id] = "";
+      setAllocations(init);
+    } catch {
+      setOpenInvoices([]);
+    }
+  }
+
+  function allocatedTotal() {
+    return Object.values(allocations).reduce((sum, v) => sum + (Number(v) || 0), 0);
   }
 
   async function collectDue() {
     if (!collect) return;
+    setSaving(true);
+    setError("");
     try {
+      const amount = Number(pay.amount);
+      const allocEntries = Object.entries(allocations)
+        .filter(([, v]) => Number(v) > 0)
+        .map(([sale_id, v]) => ({ sale_id, amount: Number(v) }));
       await api("/customers/collect-due", {
         method: "POST",
         body: JSON.stringify({
           customer_id: collect.id,
-          amount: Number(pay.amount),
+          amount,
           method: pay.method,
           notes: pay.notes || undefined,
+          allocations: allocEntries.length ? allocEntries : undefined,
         }),
       });
       setCollect(null);
@@ -80,6 +127,8 @@ export default function CustomersPage() {
       setAging(await api<AgingRow[]>("/customers/due-aging"));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed");
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -91,7 +140,7 @@ export default function CustomersPage() {
         </Btn>
         <Btn onClick={() => setOpen(true)}>Add customer</Btn>
       </PageHeader>
-      {error ? <Alert tone="error">{error}</Alert> : null}
+      {error && !collect && !open ? <Alert tone="error">{error}</Alert> : null}
       <Input className="mb-4 max-w-md" placeholder="Search name or phone…" value={q} onChange={(e) => setQ(e.target.value)} />
 
       {showAging ? (
@@ -110,7 +159,9 @@ export default function CustomersPage() {
             {aging.map((a) => (
               <tr key={a.id}>
                 <Td>
-                  {a.name}
+                  <Link href={`/customers/${a.id}`} className="font-medium text-teal-700 hover:underline">
+                    {a.name}
+                  </Link>
                   <span className="mt-0.5 block font-mono text-[11px] text-slate-500 sm:hidden">{a.phone}</span>
                 </Td>
                 <Td className="hidden font-mono sm:table-cell">{a.phone}</Td>
@@ -131,6 +182,7 @@ export default function CustomersPage() {
           <tr>
             <Th>Name</Th>
             <Th>Phone</Th>
+            <Th className="hidden md:table-cell">Credit limit</Th>
             <Th>Due balance</Th>
             <Th />
           </tr>
@@ -138,15 +190,25 @@ export default function CustomersPage() {
         <tbody>
           {rows.map((c) => (
             <tr key={c.id}>
-              <Td>{c.name}</Td>
-              <Td className="font-mono">{c.phone}</Td>
-              <Td className="font-mono">{formatBDT(c.due_balance)}</Td>
               <Td>
+                <Link href={`/customers/${c.id}`} className="font-medium text-teal-700 hover:underline">
+                  {c.name}
+                </Link>
+              </Td>
+              <Td className="font-mono">{c.phone}</Td>
+              <Td className="hidden font-mono md:table-cell">{formatBDT(c.credit_limit)}</Td>
+              <Td className="font-mono">{formatBDT(c.due_balance)}</Td>
+              <Td className="space-x-1 text-right">
+                <Link href={`/customers/${c.id}`}>
+                  <Btn variant="ghost" className="text-xs">
+                    Open
+                  </Btn>
+                </Link>
                 <Btn
                   variant="ghost"
                   className="text-xs"
                   disabled={!(c.due_balance && Number(c.due_balance) > 0)}
-                  onClick={() => setCollect(c)}
+                  onClick={() => void openCollect(c)}
                 >
                   Collect due
                 </Btn>
@@ -160,10 +222,14 @@ export default function CustomersPage() {
         totalPages={totalPages}
         total={total}
         limit={PAGE_SIZE}
-        onPage={(p) => { setPage(p); void load(p); }}
+        onPage={(p) => {
+          setPage(p);
+          void load(p);
+        }}
       />
 
       <Modal open={open} onClose={() => setOpen(false)} title="New customer">
+        {error && open ? <Alert tone="error">{error}</Alert> : null}
         <Field label="Name">
           <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
         </Field>
@@ -173,20 +239,81 @@ export default function CustomersPage() {
         <Field label="Address">
           <Input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
         </Field>
-        <Btn className="mt-3" onClick={() => void save()}>
-          Save
+        <Field label="NID (optional)">
+          <Input value={form.nid} onChange={(e) => setForm({ ...form, nid: e.target.value })} />
+        </Field>
+        <Field label="Credit limit (BDT)">
+          <Input
+            type="number"
+            min={0}
+            value={form.credit_limit}
+            onChange={(e) => setForm({ ...form, credit_limit: e.target.value })}
+          />
+        </Field>
+        <Btn className="mt-3" disabled={saving} onClick={() => void save()}>
+          {saving ? "Saving…" : "Save"}
         </Btn>
       </Modal>
 
-      <Modal open={!!collect} onClose={() => setCollect(null)} title="Collect due">
+      <Modal open={!!collect} onClose={() => setCollect(null)} title={`Collect due — ${collect?.name || ""}`}>
+        {error && collect ? <Alert tone="error">{error}</Alert> : null}
+        <p className="mb-3 text-sm text-slate-600">
+          Outstanding: <span className="font-mono font-medium">{formatBDT(collect?.due_balance)}</span>
+        </p>
         <Field label="Amount">
           <Input value={pay.amount} onChange={(e) => setPay({ ...pay, amount: e.target.value })} />
         </Field>
         <Field label="Method">
-          <Input value={pay.method} onChange={(e) => setPay({ ...pay, method: e.target.value })} />
+          <Select value={pay.method} onChange={(e) => setPay({ ...pay, method: e.target.value })}>
+            <option value="cash">Cash</option>
+            <option value="card">Card</option>
+            <option value="bkash">bKash</option>
+            <option value="nagad">Nagad</option>
+            <option value="rocket">Rocket</option>
+          </Select>
         </Field>
-        <Btn className="mt-3" onClick={() => void collectDue()}>
-          Record payment
+        <Field label="Notes">
+          <Input value={pay.notes} onChange={(e) => setPay({ ...pay, notes: e.target.value })} />
+        </Field>
+
+        {openInvoices.length ? (
+          <div className="mt-4">
+            <p className="mb-2 text-sm font-medium text-slate-700">
+              Allocate to invoices (optional) — allocated {formatBDT(allocatedTotal())}
+            </p>
+            <TableWrap className="max-h-56 overflow-auto border-0 shadow-none">
+              <thead>
+                <tr>
+                  <Th>Invoice</Th>
+                  <Th>Due</Th>
+                  <Th>Apply</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {openInvoices.map((s) => (
+                  <tr key={s.id}>
+                    <Td className="font-mono text-xs">{s.invoice_no}</Td>
+                    <Td className="font-mono">{formatBDT(s.due_amount)}</Td>
+                    <Td>
+                      <Input
+                        type="number"
+                        min={0}
+                        max={Number(s.due_amount || 0)}
+                        className="w-28"
+                        value={allocations[s.id] || ""}
+                        onChange={(e) => setAllocations({ ...allocations, [s.id]: e.target.value })}
+                      />
+                    </Td>
+                  </tr>
+                ))}
+              </tbody>
+            </TableWrap>
+            <p className="mt-1 text-xs text-slate-500">Leave blank to auto-allocate oldest invoices first.</p>
+          </div>
+        ) : null}
+
+        <Btn className="mt-3" disabled={saving} onClick={() => void collectDue()}>
+          {saving ? "Saving…" : "Record payment"}
         </Btn>
       </Modal>
     </div>
