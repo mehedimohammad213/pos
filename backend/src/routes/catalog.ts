@@ -175,10 +175,22 @@ router.patch('/serials/:id', authRequired, requireRoles('admin', 'manager', 'sto
   try {
     const body = z
       .object({
-        status: z.enum(['in_stock', 'sold', 'returned', 'defective']),
+        serial_number: z.string().min(1).optional(),
+        status: z.enum(['in_stock', 'sold', 'returned', 'defective']).optional(),
+      })
+      .refine((v) => v.serial_number !== undefined || v.status !== undefined, {
+        message: 'Provide serial_number and/or status',
       })
       .parse(req.body);
-    res.json(await catalog.updateSerialStatus(param(req.params.id), body.status, req.user!.id));
+    res.json(await catalog.updateSerial(param(req.params.id), body, req.user!.id));
+  } catch (e) {
+    next(e);
+  }
+});
+
+router.delete('/serials/:id', authRequired, requireRoles('admin', 'manager', 'stock'), async (req, res, next) => {
+  try {
+    res.json(await catalog.deleteSerial(param(req.params.id), req.user!.id));
   } catch (e) {
     next(e);
   }

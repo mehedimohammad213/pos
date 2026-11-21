@@ -752,6 +752,88 @@ export async function updateSerialStatus(id: string, status: SerialStatus, userI
   });
 }
 
+export async function updateSerial(
+  id: string,
+  input: { serial_number?: string; status?: SerialStatus },
+  userId?: string
+) {
+  if (input.status !== undefined) {
+    await updateSerialStatus(id, input.status, userId);
+  }
+  if (input.serial_number === undefined) {
+    const r = await query(
+      `SELECT s.*, p.name AS product_name, p.sku
+       FROM serials s JOIN products p ON p.id = s.product_id
+       WHERE s.id = $1`,
+      [id]
+    );
+    return assertFound(r.rows[0], 'Serial');
+  }
+
+  const serialNumber = input.serial_number.trim();
+  if (!serialNumber) throw new AppError('Serial number is required');
+
+  try {
+    const r = await query(
+      `UPDATE serials SET serial_number = $2, updated_at = NOW()
+       WHERE id = $1
+       RETURNING *`,
+      [id, serialNumber]
+    );
+    const serial = assertFound(r.rows[0], 'Serial');
+    if (userId) {
+      await writeAudit(userId, 'serial.update', 'serial', id, { serial_number: serialNumber });
+    }
+    const full = await query(
+      `SELECT s.*, p.name AS product_name, p.sku
+       FROM serials s JOIN products p ON p.id = s.product_id
+       WHERE s.id = $1`,
+      [id]
+    );
+    return assertFound(full.rows[0] || serial, 'Serial');
+  } catch (err: unknown) {
+    if (typeof err === 'object' && err && 'code' in err && (err as { code: string }).code === '23505') {
+      throw new AppError('Serial number already exists for this product', 409);
+    }
+    throw err;
+  }
+}
+
+export async function deleteSerial(id: string, userId?: string) {
+  return withTransaction(async (c) => {
+    const existing = await c.query(`SELECT * FROM serials WHERE id = $1 FOR UPDATE`, [id]);
+    const serial = assertFound(existing.rows[0], 'Serial');
+    if (serial.status === 'sold' || serial.sale_item_id) {
+      throw new AppError('Cannot delete a sold serial', 400);
+    }
+    const linked = await c.query(`SELECT 1 FROM sale_serials WHERE serial_id = $1 LIMIT 1`, [id]);
+    if (linked.rows[0]) {
+      throw new AppError('Cannot delete a serial linked to a sale', 400);
+    }
+
+    await c.query(`DELETE FROM serials WHERE id = $1`, [id]);
+
+    if (serial.status === 'in_stock') {
+      await c.query(
+        `UPDATE product_stock SET quantity = GREATEST(quantity - 1, 0), updated_at = NOW() WHERE product_id = $1`,
+        [serial.product_id]
+      );
+    }
+
+    if (userId) {
+      await writeAudit(
+        userId,
+        'serial.delete',
+        'serial',
+        id,
+        { serial_number: serial.serial_number, product_id: serial.product_id, status: serial.status },
+        c
+      );
+    }
+    return { ok: true, id };
+  });
+}
+
 export async function lowStockDemandList() {
   const r = await query(
     `SELECT p.id, p.sku, p.barcode, p.name, p.reorder_level, p.cost AS last_cost,

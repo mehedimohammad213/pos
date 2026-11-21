@@ -37,6 +37,14 @@ router.patch('/suppliers/:id', authRequired, requireRoles('admin', 'manager', 's
   }
 });
 
+router.delete('/suppliers/:id', authRequired, requireRoles('admin', 'manager', 'stock'), async (req, res, next) => {
+  try {
+    res.json(await purchase.deleteSupplier(param(req.params.id), req.user!.id));
+  } catch (e) {
+    next(e);
+  }
+});
+
 router.post('/suppliers/pay', authRequired, requireRoles('admin', 'manager'), async (req, res, next) => {
   try {
     const body = z
@@ -110,6 +118,39 @@ router.patch('/demands/:id/status', authRequired, requireRoles('admin', 'manager
   }
 });
 
+router.patch('/demands/:id', authRequired, requireRoles('admin', 'manager', 'stock'), async (req, res, next) => {
+  try {
+    const body = z
+      .object({
+        demand_date: z.string().optional(),
+        preferred_supplier_id: z.string().uuid().nullable().optional(),
+        notes: z.string().nullable().optional(),
+        items: z
+          .array(
+            z.object({
+              product_id: z.string().uuid(),
+              requested_qty: z.number().positive(),
+              last_cost: z.number().optional(),
+            })
+          )
+          .min(1)
+          .optional(),
+      })
+      .parse(req.body);
+    res.json(await purchase.updateDemand(param(req.params.id), body, req.user!.id));
+  } catch (e) {
+    next(e);
+  }
+});
+
+router.delete('/demands/:id', authRequired, requireRoles('admin', 'manager', 'stock'), async (req, res, next) => {
+  try {
+    res.json(await purchase.deleteDemand(param(req.params.id), req.user!.id));
+  } catch (e) {
+    next(e);
+  }
+});
+
 router.get('/', authRequired, async (req, res, next) => {
   try {
     const page = req.query.page !== undefined ? Number(req.query.page) : undefined;
@@ -156,6 +197,30 @@ router.post('/', authRequired, requireRoles('admin', 'manager', 'stock'), async 
       })
       .parse(req.body);
     res.status(201).json(await purchase.createPurchase(body, req.user!.id));
+  } catch (e) {
+    next(e);
+  }
+});
+
+router.patch('/:id', authRequired, requireRoles('admin', 'manager', 'stock'), async (req, res, next) => {
+  try {
+    const body = z
+      .object({
+        supplier_id: z.string().uuid().nullable().optional(),
+        invoice_no: z.string().nullable().optional(),
+        purchase_date: z.string().optional(),
+        notes: z.string().nullable().optional(),
+      })
+      .parse(req.body);
+    res.json(await purchase.updatePurchase(param(req.params.id), body, req.user!.id));
+  } catch (e) {
+    next(e);
+  }
+});
+
+router.delete('/:id', authRequired, requireRoles('admin', 'manager', 'stock'), async (req, res, next) => {
+  try {
+    res.json(await purchase.deletePurchase(param(req.params.id), req.user!.id));
   } catch (e) {
     next(e);
   }

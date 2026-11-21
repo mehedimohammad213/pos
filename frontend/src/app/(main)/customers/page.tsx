@@ -25,17 +25,21 @@ export default function CustomersPage() {
   const [aging, setAging] = useState<AgingRow[]>([]);
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
   const [collect, setCollect] = useState<Customer | null>(null);
   const [openInvoices, setOpenInvoices] = useState<Sale[]>([]);
   const [allocations, setAllocations] = useState<Record<string, string>>({});
   const [form, setForm] = useState(emptyForm);
   const [pay, setPay] = useState({ amount: "", method: "cash", notes: "" });
   const [error, setError] = useState("");
+  const [msg, setMsg] = useState("");
   const [showAging, setShowAging] = useState(false);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<Customer | null>(null);
+  const [deleteBusy, setDeleteBusy] = useState(false);
   const PAGE_SIZE = 20;
 
   async function load(p = page) {
@@ -58,27 +62,69 @@ export default function CustomersPage() {
     void api<AgingRow[]>("/customers/due-aging").then(setAging);
   }, []);
 
+  function openCreate() {
+    setEditId(null);
+    setForm(emptyForm);
+    setError("");
+    setOpen(true);
+  }
+
+  function openEdit(c: Customer) {
+    setEditId(c.id);
+    setForm({
+      name: c.name || "",
+      phone: c.phone || "",
+      address: c.address || "",
+      nid: c.nid || "",
+      credit_limit: c.credit_limit != null ? String(c.credit_limit) : "",
+    });
+    setError("");
+    setOpen(true);
+  }
+
   async function save() {
     setError("");
     setSaving(true);
     try {
-      await api("/customers", {
-        method: "POST",
-        body: JSON.stringify({
-          name: form.name.trim(),
-          phone: form.phone.trim(),
-          address: form.address.trim() || undefined,
-          nid: form.nid.trim() || undefined,
-          credit_limit: form.credit_limit ? Number(form.credit_limit) : 0,
-        }),
-      });
+      const body = {
+        name: form.name.trim(),
+        phone: form.phone.trim(),
+        address: form.address.trim() || undefined,
+        nid: form.nid.trim() || undefined,
+        credit_limit: form.credit_limit ? Number(form.credit_limit) : 0,
+      };
+      if (editId) {
+        await api(`/customers/${editId}`, { method: "PATCH", body: JSON.stringify(body) });
+        setMsg("Customer updated");
+      } else {
+        await api("/customers", { method: "POST", body: JSON.stringify(body) });
+        setMsg("Customer added");
+      }
       setOpen(false);
+      setEditId(null);
       setForm(emptyForm);
       await load(page);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function confirmDelete() {
+    if (!deleteTarget) return;
+    setDeleteBusy(true);
+    setError("");
+    try {
+      await api(`/customers/${deleteTarget.id}`, { method: "DELETE" });
+      setMsg(`Deleted "${deleteTarget.name}"`);
+      setDeleteTarget(null);
+      await load(page);
+      setAging(await api<AgingRow[]>("/customers/due-aging"));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Delete failed");
+    } finally {
+      setDeleteBusy(false);
     }
   }
 
@@ -138,9 +184,10 @@ export default function CustomersPage() {
         <Btn variant="secondary" onClick={() => setShowAging((v) => !v)}>
           {showAging ? "Hide aging" : "Due aging"}
         </Btn>
-        <Btn onClick={() => setOpen(true)}>Add customer</Btn>
+        <Btn onClick={openCreate}>Add customer</Btn>
       </PageHeader>
-      {error && !collect && !open ? <Alert tone="error">{error}</Alert> : null}
+      {error && !collect && !open && !deleteTarget ? <Alert tone="error">{error}</Alert> : null}
+      {msg ? <Alert tone="success">{msg}</Alert> : null}
       <Input className="mb-4 max-w-md" placeholder="Search name or phone…" value={q} onChange={(e) => setQ(e.target.value)} />
 
       {showAging ? (
@@ -206,6 +253,9 @@ export default function CustomersPage() {
                       Open
                     </Btn>
                   </Link>
+                  <Btn variant="ghost" className="text-xs" onClick={() => openEdit(c)}>
+                    Edit
+                  </Btn>
                   <Btn
                     variant="ghost"
                     className="text-xs"
@@ -213,6 +263,16 @@ export default function CustomersPage() {
                     onClick={() => void openCollect(c)}
                   >
                     Collect
+                  </Btn>
+                  <Btn
+                    variant="ghost"
+                    className="text-xs text-red-600 hover:text-red-700"
+                    onClick={() => {
+                      setError("");
+                      setDeleteTarget(c);
+                    }}
+                  >
+                    Delete
                   </Btn>
                 </div>
               </Td>
@@ -231,7 +291,14 @@ export default function CustomersPage() {
         }}
       />
 
-      <Modal open={open} onClose={() => setOpen(false)} title="New customer">
+      <Modal
+        open={open}
+        onClose={() => {
+          setOpen(false);
+          setEditId(null);
+        }}
+        title={editId ? "Edit customer" : "New customer"}
+      >
         {error && open ? <Alert tone="error">{error}</Alert> : null}
         <Field label="Name">
           <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
@@ -256,6 +323,36 @@ export default function CustomersPage() {
         <Btn className="mt-3" disabled={saving} onClick={() => void save()}>
           {saving ? "Saving…" : "Save"}
         </Btn>
+      </Modal>
+
+      <Modal
+        open={!!deleteTarget}
+        onClose={() => {
+          if (!deleteBusy) setDeleteTarget(null);
+        }}
+        title="Delete customer"
+      >
+        <div className="space-y-4">
+          {error && deleteTarget ? <Alert tone="error">{error}</Alert> : null}
+          <p className="text-sm text-slate-600">
+            Delete customer <span className="font-medium text-slate-900">{deleteTarget?.name}</span>
+            {deleteTarget?.phone ? (
+              <>
+                {" "}
+                (<span className="font-mono text-xs">{deleteTarget.phone}</span>)
+              </>
+            ) : null}
+            ? Past sales stay unchanged.
+          </p>
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <Btn variant="secondary" disabled={deleteBusy} onClick={() => setDeleteTarget(null)}>
+              Keep customer
+            </Btn>
+            <Btn variant="danger" disabled={deleteBusy} onClick={() => void confirmDelete()}>
+              {deleteBusy ? "Deleting…" : "Yes, delete"}
+            </Btn>
+          </div>
+        </div>
       </Modal>
 
       <Modal open={!!collect} onClose={() => setCollect(null)} title={`Collect due — ${collect?.name || ""}`}>

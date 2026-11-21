@@ -87,18 +87,43 @@ export async function updateCustomer(
   input: Partial<{ name: string; phone: string; address: string; nid: string; credit_limit: number }>
 ) {
   const phone = input.phone ? normalizeBdPhone(input.phone) : undefined;
+  try {
+    const r = await query(
+      `UPDATE customers SET
+         name = COALESCE($2, name),
+         phone = COALESCE($3, phone),
+         address = COALESCE($4, address),
+         nid = COALESCE($5, nid),
+         credit_limit = COALESCE($6, credit_limit),
+         updated_at = NOW()
+       WHERE id = $1 AND deleted_at IS NULL RETURNING *`,
+      [id, input.name ?? null, phone ?? null, input.address ?? null, input.nid ?? null, input.credit_limit ?? null]
+    );
+    return assertFound(r.rows[0]);
+  } catch (err: unknown) {
+    if (typeof err === 'object' && err && 'code' in err && (err as { code: string }).code === '23505') {
+      throw new AppError('Phone already registered', 409);
+    }
+    throw err;
+  }
+}
+
+export async function deleteCustomer(id: string) {
+  const existing = await getCustomer(id);
+  if (Number(existing.due_balance || 0) > 0) {
+    throw new AppError('Clear customer due balance before deleting', 400);
+  }
+  const suffix = `-DEL-${String(existing.id).slice(0, 8)}`;
   const r = await query(
     `UPDATE customers SET
-       name = COALESCE($2, name),
-       phone = COALESCE($3, phone),
-       address = COALESCE($4, address),
-       nid = COALESCE($5, nid),
-       credit_limit = COALESCE($6, credit_limit),
+       deleted_at = NOW(),
+       phone = phone || $2,
        updated_at = NOW()
-     WHERE id = $1 AND deleted_at IS NULL RETURNING *`,
-    [id, input.name ?? null, phone ?? null, input.address ?? null, input.nid ?? null, input.credit_limit ?? null]
+     WHERE id = $1 AND deleted_at IS NULL
+     RETURNING *`,
+    [id, suffix]
   );
-  return assertFound(r.rows[0]);
+  return assertFound(r.rows[0], 'Customer not found');
 }
 
 export async function customerHistory(id: string) {

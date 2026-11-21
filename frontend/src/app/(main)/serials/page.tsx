@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import type { Product, Serial, PaginatedResponse } from "@/lib/types";
-import { Alert, Btn, Field, Modal, PageHeader, TableWrap, Td, Th, Pagination } from "@/components/ui";
+import { Alert, Btn, Field, Input, Modal, PageHeader, TableWrap, Td, Th, Pagination } from "@/components/ui";
 
 export default function SerialsPage() {
   const [rows, setRows] = useState<Serial[]>([]);
@@ -13,12 +13,18 @@ export default function SerialsPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
 
+  const SERIAL_STATUSES = ["in_stock", "sold", "returned", "defective"] as const;
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ product_id: "", serial_numbers: "" });
   const [error, setError] = useState("");
+  const [msg, setMsg] = useState("");
   const [savingId, setSavingId] = useState<string | null>(null);
-
-  const SERIAL_STATUSES = ["in_stock", "sold", "returned", "defective"] as const;
+  const [editTarget, setEditTarget] = useState<Serial | null>(null);
+  const [editSerial, setEditSerial] = useState("");
+  const [editStatus, setEditStatus] = useState<(typeof SERIAL_STATUSES)[number]>("in_stock");
+  const [editBusy, setEditBusy] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<Serial | null>(null);
+  const [deleteBusy, setDeleteBusy] = useState(false);
 
   async function load(p = page) {
     const qs = new URLSearchParams({
@@ -93,18 +99,72 @@ export default function SerialsPage() {
     }
   }
 
+  function openEdit(s: Serial) {
+    setError("");
+    setMsg("");
+    setEditTarget(s);
+    setEditSerial(s.serial_number);
+    setEditStatus(
+      SERIAL_STATUSES.includes(s.status as (typeof SERIAL_STATUSES)[number])
+        ? (s.status as (typeof SERIAL_STATUSES)[number])
+        : "in_stock"
+    );
+  }
+
+  async function saveEdit() {
+    if (!editTarget) return;
+    const serial_number = editSerial.trim();
+    if (!serial_number) {
+      setError("Serial number is required");
+      return;
+    }
+    setEditBusy(true);
+    setError("");
+    try {
+      await api(`/catalog/serials/${editTarget.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ serial_number, status: editStatus }),
+      });
+      setEditTarget(null);
+      setMsg("Serial updated");
+      await load(page);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Update failed");
+    } finally {
+      setEditBusy(false);
+    }
+  }
+
+  async function confirmDelete() {
+    if (!deleteTarget) return;
+    setDeleteBusy(true);
+    setError("");
+    try {
+      await api(`/catalog/serials/${deleteTarget.id}`, { method: "DELETE" });
+      setDeleteTarget(null);
+      setMsg(`Deleted serial ${deleteTarget.serial_number}`);
+      await load(page);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Delete failed");
+    } finally {
+      setDeleteBusy(false);
+    }
+  }
+
   return (
     <div>
       <PageHeader title="Serial numbers">
         <Btn onClick={() => setOpen(true)}>Register serial</Btn>
       </PageHeader>
       {error ? <Alert tone="error">{error}</Alert> : null}
+      {msg ? <Alert tone="success">{msg}</Alert> : null}
       <TableWrap>
         <thead>
           <tr>
             <Th>Serial</Th>
             <Th>Product</Th>
             <Th>Status</Th>
+            <Th />
           </tr>
         </thead>
         <tbody>
@@ -127,6 +187,25 @@ export default function SerialsPage() {
                     </option>
                   ))}
                 </select>
+              </Td>
+              <Td>
+                <div className="flex flex-wrap justify-end gap-1">
+                  <Btn variant="ghost" className="min-h-9 px-2 py-1 text-xs" onClick={() => openEdit(s)}>
+                    Edit
+                  </Btn>
+                  <Btn
+                    variant="ghost"
+                    className="min-h-9 px-2 py-1 text-xs text-red-600 hover:text-red-700"
+                    disabled={s.status === "sold"}
+                    title={s.status === "sold" ? "Sold serials cannot be deleted" : "Delete serial"}
+                    onClick={() => {
+                      setError("");
+                      setDeleteTarget(s);
+                    }}
+                  >
+                    Delete
+                  </Btn>
+                </div>
               </Td>
             </tr>
           ))}
@@ -171,6 +250,65 @@ export default function SerialsPage() {
           <Btn className="w-full py-2.5" onClick={() => void create()}>
             Save Serials
           </Btn>
+        </div>
+      </Modal>
+
+      <Modal
+        open={!!editTarget}
+        onClose={() => {
+          if (!editBusy) setEditTarget(null);
+        }}
+        title="Edit serial"
+      >
+        <div className="space-y-3">
+          <p className="text-sm text-slate-600">{editTarget?.product_name}</p>
+          <Field label="Serial number">
+            <Input value={editSerial} onChange={(e) => setEditSerial(e.target.value)} />
+          </Field>
+          <Field label="Status">
+            <select
+              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-teal-500"
+              value={editStatus}
+              onChange={(e) => setEditStatus(e.target.value as (typeof SERIAL_STATUSES)[number])}
+            >
+              {SERIAL_STATUSES.map((st) => (
+                <option key={st} value={st}>
+                  {st}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <div className="flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:justify-end">
+            <Btn variant="secondary" disabled={editBusy} onClick={() => setEditTarget(null)}>
+              Cancel
+            </Btn>
+            <Btn disabled={editBusy} onClick={() => void saveEdit()}>
+              {editBusy ? "Saving…" : "Save"}
+            </Btn>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        open={!!deleteTarget}
+        onClose={() => {
+          if (!deleteBusy) setDeleteTarget(null);
+        }}
+        title="Delete serial"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-slate-600">
+            Delete serial{" "}
+            <span className="font-mono font-medium text-slate-900">{deleteTarget?.serial_number}</span>?
+          </p>
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <Btn variant="secondary" disabled={deleteBusy} onClick={() => setDeleteTarget(null)}>
+              Keep
+            </Btn>
+            <Btn variant="danger" disabled={deleteBusy} onClick={() => void confirmDelete()}>
+              {deleteBusy ? "Deleting…" : "Yes, delete"}
+            </Btn>
+          </div>
         </div>
       </Modal>
     </div>

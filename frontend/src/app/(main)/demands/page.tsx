@@ -22,8 +22,12 @@ export default function DemandsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [open, setOpen] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
   const [error, setError] = useState("");
+  const [msg, setMsg] = useState("");
   const [saving, setSaving] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<PurchaseDemand | null>(null);
+  const [deleteBusy, setDeleteBusy] = useState(false);
   const [form, setForm] = useState({
     demand_date: "",
     preferred_supplier_id: "",
@@ -62,6 +66,7 @@ export default function DemandsPage() {
 
   function openCreate() {
     setError("");
+    setEditId(null);
     setForm({
       demand_date: todayISO(),
       preferred_supplier_id: "",
@@ -69,6 +74,30 @@ export default function DemandsPage() {
       lines: [{ product_id: "", quantity: "1", last_cost: "" }],
     });
     setOpen(true);
+  }
+
+  async function openEdit(d: PurchaseDemand) {
+    setError("");
+    setMsg("");
+    try {
+      const full = await api<PurchaseDemand>(`/purchases/demands/${d.id}`);
+      setEditId(full.id);
+      setForm({
+        demand_date: full.demand_date ? String(full.demand_date).slice(0, 10) : todayISO(),
+        preferred_supplier_id: full.preferred_supplier_id || "",
+        notes: full.notes || "",
+        lines: (full.items || []).length
+          ? (full.items || []).map((item) => ({
+              product_id: item.product_id,
+              quantity: String(item.requested_qty ?? 1),
+              last_cost: item.last_cost != null ? String(item.last_cost) : "",
+            }))
+          : [{ product_id: "", quantity: "1", last_cost: "" }],
+      });
+      setOpen(true);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to load demand");
+    }
   }
 
   function updateLine(i: number, patch: Partial<DemandLine>) {
@@ -85,7 +114,7 @@ export default function DemandsPage() {
     });
   }
 
-  async function createDemand() {
+  async function saveDemand() {
     const items = form.lines
       .filter((l) => l.product_id && Number(l.quantity) > 0)
       .map((l) => ({
@@ -100,22 +129,55 @@ export default function DemandsPage() {
     setSaving(true);
     setError("");
     try {
-      const demand = await api<PurchaseDemand>("/purchases/demands", {
-        method: "POST",
-        body: JSON.stringify({
-          demand_date: form.demand_date || undefined,
-          preferred_supplier_id: form.preferred_supplier_id || undefined,
-          notes: form.notes || undefined,
-          items,
-        }),
-      });
-      setOpen(false);
-      router.push(`/demands/${demand.id}`);
+      const body = {
+        demand_date: form.demand_date || undefined,
+        preferred_supplier_id: form.preferred_supplier_id || undefined,
+        notes: form.notes || undefined,
+        items,
+      };
+      if (editId) {
+        await api(`/purchases/demands/${editId}`, { method: "PATCH", body: JSON.stringify(body) });
+        setOpen(false);
+        setEditId(null);
+        setMsg("Demand updated");
+        await load(page, q);
+      } else {
+        const demand = await api<PurchaseDemand>("/purchases/demands", {
+          method: "POST",
+          body: JSON.stringify(body),
+        });
+        setOpen(false);
+        router.push(`/demands/${demand.id}`);
+      }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to create demand");
+      setError(e instanceof Error ? e.message : editId ? "Failed to update demand" : "Failed to create demand");
     } finally {
       setSaving(false);
     }
+  }
+
+  async function confirmDelete() {
+    if (!deleteTarget) return;
+    setDeleteBusy(true);
+    setError("");
+    try {
+      await api(`/purchases/demands/${deleteTarget.id}`, { method: "DELETE" });
+      setMsg(`Deleted ${deleteTarget.demand_no || "demand"}`);
+      setDeleteTarget(null);
+      await load(page, q);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Delete failed");
+    } finally {
+      setDeleteBusy(false);
+    }
+  }
+
+  function canEditDemand(d: PurchaseDemand) {
+    return ["draft", "ordered", "cancelled"].includes(d.status);
+  }
+
+  function canDeleteDemand(d: PurchaseDemand) {
+    return ["draft", "cancelled"].includes(d.status);
   }
 
   return (
@@ -123,7 +185,8 @@ export default function DemandsPage() {
       <PageHeader title="Purchase demands">
         <Btn onClick={openCreate}>New demand</Btn>
       </PageHeader>
-      {error && !open ? <Alert tone="error">{error}</Alert> : null}
+      {error && !open && !deleteTarget ? <Alert tone="error">{error}</Alert> : null}
+      {msg ? <Alert tone="success">{msg}</Alert> : null}
       <Input
         className="mb-4 max-w-md"
         placeholder="Search demand #, product, status, supplier…"
@@ -158,9 +221,30 @@ export default function DemandsPage() {
               <Td className="hidden sm:table-cell">{d.supplier_name || "—"}</Td>
               <Td className="hidden md:table-cell">{formatDateTime(d.created_at)}</Td>
               <Td>
-                <Link href={`/demands/${d.id}`} className="text-teal-700 underline">
-                  View
-                </Link>
+                <div className="flex flex-wrap justify-end gap-1">
+                  <Link href={`/demands/${d.id}`}>
+                    <Btn variant="ghost" className="min-h-9 px-2 py-1 text-xs">
+                      View
+                    </Btn>
+                  </Link>
+                  {canEditDemand(d) ? (
+                    <Btn variant="ghost" className="min-h-9 px-2 py-1 text-xs" onClick={() => void openEdit(d)}>
+                      Edit
+                    </Btn>
+                  ) : null}
+                  {canDeleteDemand(d) ? (
+                    <Btn
+                      variant="ghost"
+                      className="min-h-9 px-2 py-1 text-xs text-red-600 hover:text-red-700"
+                      onClick={() => {
+                        setError("");
+                        setDeleteTarget(d);
+                      }}
+                    >
+                      Delete
+                    </Btn>
+                  ) : null}
+                </div>
               </Td>
             </tr>
           ))}
@@ -182,7 +266,15 @@ export default function DemandsPage() {
         }}
       />
 
-      <Modal open={open} onClose={() => setOpen(false)} title="New purchase demand" wide>
+      <Modal
+        open={open}
+        onClose={() => {
+          setOpen(false);
+          setEditId(null);
+        }}
+        title={editId ? "Edit purchase demand" : "New purchase demand"}
+        wide
+      >
         {error ? <Alert tone="error">{error}</Alert> : null}
         <div className="grid gap-3 sm:grid-cols-2">
           <Field label="Date">
@@ -247,16 +339,51 @@ export default function DemandsPage() {
           </Btn>
         </div>
         <div className="mt-4 flex flex-wrap gap-2">
-          <Btn disabled={saving} onClick={() => void createDemand()}>
-            {saving ? "Saving…" : "Create demand"}
+          <Btn disabled={saving} onClick={() => void saveDemand()}>
+            {saving ? "Saving…" : editId ? "Save changes" : "Create demand"}
           </Btn>
-          <Btn variant="secondary" onClick={() => setOpen(false)}>
+          <Btn
+            variant="secondary"
+            onClick={() => {
+              setOpen(false);
+              setEditId(null);
+            }}
+          >
             Cancel
           </Btn>
         </div>
-        <p className="mt-3 text-xs text-slate-500">
-          After creating, open the demand and use Convert to purchase to place the order.
-        </p>
+        {!editId ? (
+          <p className="mt-3 text-xs text-slate-500">
+            After creating, open the demand and use Convert to purchase to place the order.
+          </p>
+        ) : null}
+      </Modal>
+
+      <Modal
+        open={!!deleteTarget}
+        onClose={() => {
+          if (!deleteBusy) setDeleteTarget(null);
+        }}
+        title="Delete demand"
+      >
+        <div className="space-y-4">
+          {error && deleteTarget ? <Alert tone="error">{error}</Alert> : null}
+          <p className="text-sm text-slate-600">
+            Delete demand{" "}
+            <span className="font-medium text-slate-900">
+              {deleteTarget?.demand_no || deleteTarget?.id.slice(0, 8)}
+            </span>
+            ?
+          </p>
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <Btn variant="secondary" disabled={deleteBusy} onClick={() => setDeleteTarget(null)}>
+              Keep
+            </Btn>
+            <Btn variant="danger" disabled={deleteBusy} onClick={() => void confirmDelete()}>
+              {deleteBusy ? "Deleting…" : "Yes, delete"}
+            </Btn>
+          </div>
+        </div>
       </Modal>
     </div>
   );

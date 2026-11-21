@@ -85,7 +85,24 @@ router.post('/', authRequired, async (req, res, next) => {
 
 router.patch('/:id', authRequired, async (req, res, next) => {
   try {
-    res.json(await customers.updateCustomer(param(req.params.id), req.body));
+    const body = z
+      .object({
+        name: z.string().min(1).optional(),
+        phone: z.string().min(8).optional(),
+        address: z.string().optional(),
+        nid: z.string().optional(),
+        credit_limit: z.number().optional(),
+      })
+      .parse(req.body);
+    res.json(await customers.updateCustomer(param(req.params.id), body));
+  } catch (e) {
+    next(e);
+  }
+});
+
+router.delete('/:id', authRequired, async (req, res, next) => {
+  try {
+    res.json(await customers.deleteCustomer(param(req.params.id)));
   } catch (e) {
     next(e);
   }

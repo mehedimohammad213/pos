@@ -215,6 +215,181 @@ export async function updateDemandStatus(id: string, status: string, userId: str
   return demand;
 }
 
+export async function updateDemand(
+  id: string,
+  input: {
+    demand_date?: string;
+    preferred_supplier_id?: string | null;
+    notes?: string | null;
+    items?: { product_id: string; requested_qty: number; last_cost?: number }[];
+  },
+  userId: string
+) {
+  const existing = await getDemand(id);
+  if (!['draft', 'ordered', 'cancelled'].includes(existing.status)) {
+    throw new AppError('Only draft/ordered/cancelled demands can be edited', 400);
+  }
+  if (input.items !== undefined && !input.items.length) {
+    throw new AppError('Demand needs at least one item');
+  }
+
+  await withTransaction(async (client) => {
+    await client.query(
+      `UPDATE purchase_demands SET
+         demand_date = COALESCE($2::date, demand_date),
+         preferred_supplier_id = COALESCE($3, preferred_supplier_id),
+         notes = COALESCE($4, notes),
+         updated_at = NOW()
+       WHERE id = $1`,
+      [
+        id,
+        input.demand_date ?? null,
+        input.preferred_supplier_id === undefined ? null : input.preferred_supplier_id,
+        input.notes === undefined ? null : input.notes,
+      ]
+    );
+
+    if (input.items) {
+      const received = (existing.items || []).some(
+        (i: { received_qty?: number }) => Number(i.received_qty || 0) > 0
+      );
+      if (received) {
+        throw new AppError('Cannot edit items after stock has been received', 400);
+      }
+      await client.query(`DELETE FROM purchase_demand_items WHERE demand_id = $1`, [id]);
+      for (const item of input.items) {
+        await client.query(
+          `INSERT INTO purchase_demand_items (demand_id, product_id, requested_qty, last_cost)
+           VALUES ($1,$2,$3,$4)`,
+          [id, item.product_id, item.requested_qty, item.last_cost ?? 0]
+        );
+      }
+    }
+
+    await writeAudit(userId, 'demand.update', 'purchase_demand', id, {
+      demand_no: existing.demand_no,
+    }, client);
+  });
+
+  return getDemand(id);
+}
+
+export async function deleteDemand(id: string, userId: string) {
+  const existing = await getDemand(id);
+  if (!['draft', 'cancelled'].includes(existing.status)) {
+    throw new AppError('Only draft or cancelled demands can be deleted', 400);
+  }
+  const linked = await query(`SELECT id FROM purchases WHERE demand_id = $1 LIMIT 1`, [id]);
+  if (linked.rows[0]) {
+    throw new AppError('Demand is linked to a purchase and cannot be deleted', 400);
+  }
+  await query(`DELETE FROM purchase_demands WHERE id = $1`, [id]);
+  await writeAudit(userId, 'demand.delete', 'purchase_demand', id, { demand_no: existing.demand_no });
+  return { ok: true, id };
+}
+
+export async function updatePurchase(
+  id: string,
+  input: {
+    supplier_id?: string | null;
+    invoice_no?: string | null;
+    purchase_date?: string;
+    notes?: string | null;
+  },
+  userId: string
+) {
+  await getPurchase(id);
+  const r = await query(
+    `UPDATE purchases SET
+       supplier_id = COALESCE($2, supplier_id),
+       invoice_no = COALESCE($3, invoice_no),
+       purchase_date = COALESCE($4::date, purchase_date),
+       notes = COALESCE($5, notes),
+       updated_at = NOW()
+     WHERE id = $1
+     RETURNING *`,
+    [
+      id,
+      input.supplier_id === undefined ? null : input.supplier_id,
+      input.invoice_no === undefined ? null : input.invoice_no,
+      input.purchase_date ?? null,
+      input.notes === undefined ? null : input.notes,
+    ]
+  );
+  const purchase = assertFound(r.rows[0], 'Purchase not found');
+  await writeAudit(userId, 'purchase.update', 'purchase', id, input);
+  return getPurchase(purchase.id);
+}
+
+export async function deletePurchase(id: string, userId: string) {
+  return withTransaction(async (client) => {
+    const purchase = await getPurchase(id, client);
+    const soldSerial = await client.query(
+      `SELECT id FROM serials
+       WHERE purchase_id = $1 AND (status = 'sold' OR sale_item_id IS NOT NULL)
+       LIMIT 1`,
+      [id]
+    );
+    if (soldSerial.rows[0]) {
+      throw new AppError('Cannot delete purchase: one or more serials were already sold', 400);
+    }
+
+    for (const item of purchase.items || []) {
+      await client.query(
+        `UPDATE product_stock
+         SET quantity = GREATEST(quantity - $2, 0), updated_at = NOW()
+         WHERE product_id = $1`,
+        [item.product_id, Number(item.quantity)]
+      );
+    }
+
+    await client.query(`DELETE FROM serials WHERE purchase_id = $1 AND status = 'in_stock'`, [id]);
+    await client.query(`UPDATE serials SET purchase_id = NULL WHERE purchase_id = $1`, [id]);
+
+    if (purchase.supplier_id && Number(purchase.due_amount || 0) > 0) {
+      await client.query(
+        `UPDATE suppliers
+         SET due_balance = GREATEST(due_balance - $2, 0), updated_at = NOW()
+         WHERE id = $1`,
+        [purchase.supplier_id, Number(purchase.due_amount)]
+      );
+    }
+
+    await client.query(`DELETE FROM supplier_payments WHERE purchase_id = $1`, [id]);
+    await client.query(`DELETE FROM purchases WHERE id = $1`, [id]);
+    await writeAudit(
+      userId,
+      'purchase.delete',
+      'purchase',
+      id,
+      { purchase_no: purchase.purchase_no, total: purchase.total },
+      client
+    );
+    return { ok: true, id };
+  });
+}
+
+export async function deleteSupplier(id: string, userId: string) {
+  const existing = await query(`SELECT * FROM suppliers WHERE id = $1 AND deleted_at IS NULL`, [id]);
+  const supplier = assertFound(existing.rows[0], 'Supplier not found');
+  if (Number(supplier.due_balance || 0) > 0) {
+    throw new AppError('Clear supplier balance before deleting', 400);
+  }
+  const linked = await query(`SELECT id FROM purchases WHERE supplier_id = $1 LIMIT 1`, [id]);
+  if (linked.rows[0]) {
+    throw new AppError('Supplier has purchases and cannot be deleted', 400);
+  }
+  const r = await query(
+    `UPDATE suppliers SET deleted_at = NOW(), updated_at = NOW()
+     WHERE id = $1 AND deleted_at IS NULL
+     RETURNING *`,
+    [id]
+  );
+  const row = assertFound(r.rows[0], 'Supplier not found');
+  await writeAudit(userId, 'supplier.delete', 'supplier', id, { name: supplier.name });
+  return row;
+}
+
 export async function listPurchases(params?: {
   page?: number;
   limit?: number;

@@ -1,5 +1,5 @@
 import { query } from '../db/pool';
-import { assertFound } from '../utils/errors';
+import { AppError, assertFound } from '../utils/errors';
 import { formatPaginatedResponse } from '../utils/pagination';
 
 export async function listExpenseCategories() {
@@ -73,4 +73,35 @@ export async function createExpense(
     [input.category_id ?? null, input.amount, input.expense_date ?? null, input.note ?? null, userId]
   );
   return assertFound(r.rows[0]);
+}
+
+export async function updateExpense(
+  id: string,
+  input: Partial<{ category_id: string | null; amount: number; expense_date: string; note: string | null }>
+) {
+  if (input.amount !== undefined && !(Number(input.amount) > 0)) {
+    throw new AppError('Amount must be positive');
+  }
+  const r = await query(
+    `UPDATE expenses SET
+       category_id = COALESCE($2, category_id),
+       amount = COALESCE($3, amount),
+       expense_date = COALESCE($4::date, expense_date),
+       note = COALESCE($5, note)
+     WHERE id = $1
+     RETURNING *`,
+    [
+      id,
+      input.category_id === undefined ? null : input.category_id,
+      input.amount ?? null,
+      input.expense_date ?? null,
+      input.note === undefined ? null : input.note,
+    ]
+  );
+  return assertFound(r.rows[0], 'Expense not found');
+}
+
+export async function deleteExpense(id: string) {
+  const r = await query(`DELETE FROM expenses WHERE id = $1 RETURNING *`, [id]);
+  return assertFound(r.rows[0], 'Expense not found');
 }

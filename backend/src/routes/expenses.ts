@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
+import { param } from '../utils/params';
 import { authRequired, requireRoles } from '../middleware/auth';
 import * as expenses from '../services/expenseService';
 
@@ -51,6 +52,30 @@ router.post('/', authRequired, requireRoles('admin', 'manager'), async (req, res
       })
       .parse(req.body);
     res.status(201).json(await expenses.createExpense(body, req.user!.id));
+  } catch (e) {
+    next(e);
+  }
+});
+
+router.patch('/:id', authRequired, requireRoles('admin', 'manager'), async (req, res, next) => {
+  try {
+    const body = z
+      .object({
+        category_id: z.string().uuid().nullable().optional(),
+        amount: z.number().positive().optional(),
+        expense_date: z.string().optional(),
+        note: z.string().nullable().optional(),
+      })
+      .parse(req.body);
+    res.json(await expenses.updateExpense(param(req.params.id), body));
+  } catch (e) {
+    next(e);
+  }
+});
+
+router.delete('/:id', authRequired, requireRoles('admin', 'manager'), async (req, res, next) => {
+  try {
+    res.json(await expenses.deleteExpense(param(req.params.id)));
   } catch (e) {
     next(e);
   }
