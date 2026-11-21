@@ -67,7 +67,7 @@ export default function WalkInExchangePage() {
 
   async function submit() {
     if (!canWalkIn) {
-      setError("Walk-in exchange permission required");
+      setError("Item Exchange permission required");
       return;
     }
     setSaving(true);
@@ -105,7 +105,7 @@ export default function WalkInExchangePage() {
           payments: [{ method: payMethod, amount: paid }],
         }),
       });
-      setMsg("Walk-in exchange completed");
+      setMsg("Item Exchange completed");
       if (result.new_sale?.id) router.push(`/sales/${result.new_sale.id}`);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Exchange failed");
@@ -117,7 +117,7 @@ export default function WalkInExchangePage() {
   if (!canWalkIn) {
     return (
       <div>
-        <PageHeader title="Walk-in exchange" />
+        <PageHeader title="Item Exchange" />
         <Alert tone="error">You do not have permission for walk-in exchanges.</Alert>
       </div>
     );
@@ -125,7 +125,7 @@ export default function WalkInExchangePage() {
 
   return (
     <div>
-      <PageHeader title="Walk-in exchange" />
+      <PageHeader title="Item Exchange" />
       {msg ? <Alert tone="success">{msg}</Alert> : null}
       {error ? <Alert tone="error">{error}</Alert> : null}
 

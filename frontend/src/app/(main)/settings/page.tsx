@@ -5,7 +5,22 @@ import { useEffect, useState } from "react";
 import { api, mediaUrl, uploadImage } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import type { AuthUser, PermissionKey, ShopSettings, Shift } from "@/lib/types";
-import { Alert, Btn, Field, Input, Modal, PageHeader, Select, TableWrap, Td, Th } from "@/components/ui";
+import {
+  Alert,
+  Btn,
+  Field,
+  Input,
+  Modal,
+  PageHeader,
+  RowBtn,
+  Select,
+  TableRowActions,
+  TableWrap,
+  Td,
+  TdActions,
+  Th,
+  ThActions,
+} from "@/components/ui";
 import { formatDateTime } from "@/lib/format";
 
 type UserRow = AuthUser & {
@@ -285,7 +300,7 @@ export default function SettingsPage() {
                 <Th className="hidden sm:table-cell">Email</Th>
                 <Th>Role</Th>
                 <Th className="hidden md:table-cell">Status</Th>
-                <Th />
+                <ThActions />
               </tr>
             </thead>
             <tbody>
@@ -298,11 +313,11 @@ export default function SettingsPage() {
                   <Td className="hidden max-w-[12rem] truncate sm:table-cell">{u.email}</Td>
                   <Td>{u.role}</Td>
                   <Td className="hidden md:table-cell">{u.is_active === false ? "Inactive" : "Active"}</Td>
-                  <Td className="text-right">
-                    <Btn variant="ghost" className="text-xs" onClick={() => openEdit(u)}>
-                      Edit
-                    </Btn>
-                  </Td>
+                  <TdActions>
+                    <TableRowActions>
+                      <RowBtn onClick={() => openEdit(u)}>Edit</RowBtn>
+                    </TableRowActions>
+                  </TdActions>
                 </tr>
               ))}
             </tbody>

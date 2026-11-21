@@ -1,11 +1,28 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import type { Product, PurchaseDemand, Supplier, PaginatedResponse } from "@/lib/types";
-import { Alert, Btn, Field, Input, Modal, PageHeader, Select, TableWrap, Td, Th, Pagination } from "@/components/ui";
+import {
+  Alert,
+  Btn,
+  Field,
+  Input,
+  Modal,
+  PageHeader,
+  Pagination,
+  RowBtn,
+  RowDeleteBtn,
+  RowLink,
+  Select,
+  TableRowActions,
+  TableWrap,
+  Td,
+  TdActions,
+  Th,
+  ThActions,
+} from "@/components/ui";
 import { formatDateTime, todayISO } from "@/lib/format";
 
 const PAGE_SIZE = 20;
@@ -182,8 +199,8 @@ export default function DemandsPage() {
 
   return (
     <div>
-      <PageHeader title="Purchase demands">
-        <Btn onClick={openCreate}>New demand</Btn>
+      <PageHeader title="Purchase Demand">
+        <Btn onClick={openCreate}>New Demand</Btn>
       </PageHeader>
       {error && !open && !deleteTarget ? <Alert tone="error">{error}</Alert> : null}
       {msg ? <Alert tone="success">{msg}</Alert> : null}
@@ -201,7 +218,7 @@ export default function DemandsPage() {
             <Th>Status</Th>
             <Th className="hidden sm:table-cell">Supplier</Th>
             <Th className="hidden md:table-cell">Created</Th>
-            <Th />
+            <ThActions />
           </tr>
         </thead>
         <tbody>
@@ -220,32 +237,20 @@ export default function DemandsPage() {
               <Td>{d.status}</Td>
               <Td className="hidden sm:table-cell">{d.supplier_name || "—"}</Td>
               <Td className="hidden md:table-cell">{formatDateTime(d.created_at)}</Td>
-              <Td>
-                <div className="flex flex-wrap justify-end gap-1">
-                  <Link href={`/demands/${d.id}`}>
-                    <Btn variant="ghost" className="min-h-9 px-2 py-1 text-xs">
-                      View
-                    </Btn>
-                  </Link>
-                  {canEditDemand(d) ? (
-                    <Btn variant="ghost" className="min-h-9 px-2 py-1 text-xs" onClick={() => void openEdit(d)}>
-                      Edit
-                    </Btn>
-                  ) : null}
+              <TdActions>
+                <TableRowActions>
+                  <RowLink href={`/demands/${d.id}`}>View</RowLink>
+                  {canEditDemand(d) ? <RowBtn onClick={() => void openEdit(d)}>Edit</RowBtn> : null}
                   {canDeleteDemand(d) ? (
-                    <Btn
-                      variant="ghost"
-                      className="min-h-9 px-2 py-1 text-xs text-red-600 hover:text-red-700"
+                    <RowDeleteBtn
                       onClick={() => {
                         setError("");
                         setDeleteTarget(d);
                       }}
-                    >
-                      Delete
-                    </Btn>
+                    />
                   ) : null}
-                </div>
-              </Td>
+                </TableRowActions>
+              </TdActions>
             </tr>
           ))}
           {!rows.length ? (

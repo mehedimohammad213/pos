@@ -3,7 +3,25 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import type { Product, Purchase, Supplier, PaginatedResponse } from "@/lib/types";
-import { Alert, Btn, Field, Input, Modal, PageHeader, Select, TableWrap, Td, Th, Pagination } from "@/components/ui";
+import {
+  Alert,
+  Btn,
+  Field,
+  Input,
+  Modal,
+  PageHeader,
+  Pagination,
+  RowBtn,
+  RowDeleteBtn,
+  Select,
+  TabBtn,
+  TableRowActions,
+  TableWrap,
+  Td,
+  TdActions,
+  Th,
+  ThActions,
+} from "@/components/ui";
 import { formatBDT, formatDate, todayISO } from "@/lib/format";
 
 type PurchaseLine = { product_id: string; quantity: string; unit_cost: string };
@@ -265,11 +283,11 @@ export default function PurchasesPage() {
 
   return (
     <div>
-      <PageHeader title="Purchases">
+      <PageHeader title="Goods Receive & Suppliers">
         <Btn variant="secondary" onClick={openCreateSupplier}>
-          Add supplier
+          New Supplier
         </Btn>
-        <Btn onClick={openCreatePurchase}>New purchase</Btn>
+        <Btn onClick={openCreatePurchase}>New Purchase</Btn>
       </PageHeader>
       {error && !supOpen && !purOpen && !deletePurchaseTarget && !deleteSupplierTarget ? (
         <Alert tone="error">{error}</Alert>
@@ -293,7 +311,7 @@ export default function PurchasesPage() {
                 <Th>Supplier</Th>
                 <Th>Total</Th>
                 <Th className="hidden md:table-cell">#</Th>
-                <Th />
+                <ThActions />
               </tr>
             </thead>
             <tbody>
@@ -308,23 +326,17 @@ export default function PurchasesPage() {
                   </Td>
                   <Td className="font-mono">{formatBDT(p.total)}</Td>
                   <Td className="hidden font-mono text-xs md:table-cell">{p.purchase_no || "—"}</Td>
-                  <Td>
-                    <div className="flex flex-wrap justify-end gap-1">
-                      <Btn variant="ghost" className="min-h-9 px-2 py-1 text-xs" onClick={() => void openEditPurchase(p)}>
-                        Edit
-                      </Btn>
-                      <Btn
-                        variant="ghost"
-                        className="min-h-9 px-2 py-1 text-xs text-red-600 hover:text-red-700"
+                  <TdActions>
+                    <TableRowActions>
+                      <RowBtn onClick={() => void openEditPurchase(p)}>Edit</RowBtn>
+                      <RowDeleteBtn
                         onClick={() => {
                           setError("");
                           setDeletePurchaseTarget(p);
                         }}
-                      >
-                        Delete
-                      </Btn>
-                    </div>
-                  </Td>
+                      />
+                    </TableRowActions>
+                  </TdActions>
                 </tr>
               ))}
             </tbody>
@@ -348,7 +360,7 @@ export default function PurchasesPage() {
                 <Th>Name</Th>
                 <Th className="hidden md:table-cell">Phone</Th>
                 <Th>Balance</Th>
-                <Th />
+                <ThActions />
               </tr>
             </thead>
             <tbody>
@@ -362,26 +374,18 @@ export default function PurchasesPage() {
                   </Td>
                   <Td className="hidden font-mono md:table-cell">{s.phone}</Td>
                   <Td className="font-mono">{formatBDT(s.due_balance)}</Td>
-                  <Td className="text-right">
-                    <div className="flex flex-wrap justify-end gap-1">
-                      <Btn variant="ghost" className="min-h-9 px-2 py-1 text-xs" onClick={() => openEditSupplier(s)}>
-                        Edit
-                      </Btn>
-                      <Btn variant="ghost" className="min-h-9 px-2 py-1 text-xs" onClick={() => setPayOpen(s)}>
-                        Pay
-                      </Btn>
-                      <Btn
-                        variant="ghost"
-                        className="min-h-9 px-2 py-1 text-xs text-red-600 hover:text-red-700"
+                  <TdActions>
+                    <TableRowActions>
+                      <RowBtn onClick={() => openEditSupplier(s)}>Edit</RowBtn>
+                      <RowBtn onClick={() => setPayOpen(s)}>Pay Due</RowBtn>
+                      <RowDeleteBtn
                         onClick={() => {
                           setError("");
                           setDeleteSupplierTarget(s);
                         }}
-                      >
-                        Delete
-                      </Btn>
-                    </div>
-                  </Td>
+                      />
+                    </TableRowActions>
+                  </TdActions>
                 </tr>
               ))}
             </tbody>
@@ -585,19 +589,5 @@ export default function PurchasesPage() {
         </div>
       </Modal>
     </div>
-  );
-}
-
-function TabBtn({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`rounded-lg px-4 py-2 text-sm font-medium ${
-        active ? "bg-teal-600 text-white" : "bg-white border border-slate-300 text-slate-700"
-      }`}
-    >
-      {children}
-    </button>
   );
 }

@@ -3,7 +3,23 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import type { Product, Serial, PaginatedResponse } from "@/lib/types";
-import { Alert, Btn, Field, Input, Modal, PageHeader, TableWrap, Td, Th, Pagination } from "@/components/ui";
+import {
+  Alert,
+  Btn,
+  Field,
+  Input,
+  Modal,
+  PageHeader,
+  Pagination,
+  RowBtn,
+  RowDeleteBtn,
+  TableRowActions,
+  TableWrap,
+  Td,
+  TdActions,
+  Th,
+  ThActions,
+} from "@/components/ui";
 
 export default function SerialsPage() {
   const [rows, setRows] = useState<Serial[]>([]);
@@ -153,8 +169,8 @@ export default function SerialsPage() {
 
   return (
     <div>
-      <PageHeader title="Serial numbers">
-        <Btn onClick={() => setOpen(true)}>Register serial</Btn>
+      <PageHeader title="Device Serials">
+        <Btn onClick={() => setOpen(true)}>New Serial</Btn>
       </PageHeader>
       {error ? <Alert tone="error">{error}</Alert> : null}
       {msg ? <Alert tone="success">{msg}</Alert> : null}
@@ -164,7 +180,7 @@ export default function SerialsPage() {
             <Th>Serial</Th>
             <Th>Product</Th>
             <Th>Status</Th>
-            <Th />
+            <ThActions />
           </tr>
         </thead>
         <tbody>
@@ -188,25 +204,19 @@ export default function SerialsPage() {
                   ))}
                 </select>
               </Td>
-              <Td>
-                <div className="flex flex-wrap justify-end gap-1">
-                  <Btn variant="ghost" className="min-h-9 px-2 py-1 text-xs" onClick={() => openEdit(s)}>
-                    Edit
-                  </Btn>
-                  <Btn
-                    variant="ghost"
-                    className="min-h-9 px-2 py-1 text-xs text-red-600 hover:text-red-700"
+              <TdActions>
+                <TableRowActions>
+                  <RowBtn onClick={() => openEdit(s)}>Edit</RowBtn>
+                  <RowDeleteBtn
                     disabled={s.status === "sold"}
                     title={s.status === "sold" ? "Sold serials cannot be deleted" : "Delete serial"}
                     onClick={() => {
                       setError("");
                       setDeleteTarget(s);
                     }}
-                  >
-                    Delete
-                  </Btn>
-                </div>
-              </Td>
+                  />
+                </TableRowActions>
+              </TdActions>
             </tr>
           ))}
         </tbody>

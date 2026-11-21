@@ -5,7 +5,24 @@ import Link from "next/link";
 import { BarcodeInputs } from "@/components/BarcodeInputs";
 import { BarcodeScanner } from "@/components/BarcodeScanner";
 import { ProductLabelPrint, ProductLabelsPrint } from "@/components/ProductLabel";
-import { Alert, Btn, Field, Input, Modal, PageHeader, Pagination, Select, TableWrap, Td, Th } from "@/components/ui";
+import {
+  Alert,
+  Btn,
+  Field,
+  Input,
+  Modal,
+  PageHeader,
+  Pagination,
+  RowBtn,
+  RowDeleteBtn,
+  Select,
+  TableRowActions,
+  TableWrap,
+  Td,
+  TdActions,
+  Th,
+  ThActions,
+} from "@/components/ui";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { formatBDT } from "@/lib/format";
@@ -283,7 +300,7 @@ export default function ProductsPage() {
   return (
     <div>
       <div className="no-print">
-      <PageHeader title="Products">
+      <PageHeader title="Product Catalog">
         <Btn
           variant="secondary"
           className="hidden sm:inline-flex"
@@ -314,7 +331,7 @@ export default function ProductsPage() {
           </Btn>
         </Link>
         <Link href="/products/new">
-          <Btn>Add product</Btn>
+          <Btn>New Product</Btn>
         </Link>
       </PageHeader>
       {error ? <Alert tone="error">{error}</Alert> : null}
@@ -365,7 +382,7 @@ export default function ProductsPage() {
             <Th>Stock</Th>
             <Th>Retail</Th>
             {canSeeCost ? <Th className="hidden sm:table-cell">Cost</Th> : null}
-            <Th />
+            <ThActions />
           </tr>
         </thead>
         <tbody>
@@ -388,42 +405,28 @@ export default function ProductsPage() {
               <Td className="font-mono">{Number(p.stock_qty ?? 0)}</Td>
               <Td className="font-mono">{formatBDT(p.retail_price)}</Td>
               {canSeeCost ? <Td className="hidden font-mono sm:table-cell">{formatBDT(p.cost)}</Td> : null}
-              <Td>
-                <div className="flex flex-wrap gap-1">
-                  <Btn variant="ghost" className="min-h-9 px-2 py-1 text-xs" onClick={() => startEdit(p)}>
-                    Edit
-                  </Btn>
-                  <Btn
-                    variant="ghost"
-                    className="min-h-9 px-2 py-1 text-xs"
-                    onClick={() => setAdjust({ id: p.id, qty: "0", note: "" })}
-                  >
-                    Stock
-                  </Btn>
-                  <Btn
-                    variant="ghost"
-                    className="min-h-9 px-2 py-1 text-xs"
+              <TdActions>
+                <TableRowActions>
+                  <RowBtn onClick={() => startEdit(p)}>Edit</RowBtn>
+                  <RowBtn onClick={() => setAdjust({ id: p.id, qty: "0", note: "" })}>Adjust Stock</RowBtn>
+                  <RowBtn
                     onClick={() => {
                       setPrintLabels(null);
                       setLabel(p);
                     }}
                   >
-                    Label
-                  </Btn>
+                    Print Label
+                  </RowBtn>
                   {canManageProducts ? (
-                    <Btn
-                      variant="ghost"
-                      className="min-h-9 px-2 py-1 text-xs text-red-600 hover:text-red-700"
+                    <RowDeleteBtn
                       onClick={() => {
                         setError("");
                         setDeleteTarget(p);
                       }}
-                    >
-                      Delete
-                    </Btn>
+                    />
                   ) : null}
-                </div>
-              </Td>
+                </TableRowActions>
+              </TdActions>
             </tr>
           ))}
         </tbody>

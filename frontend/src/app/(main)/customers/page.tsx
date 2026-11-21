@@ -4,7 +4,25 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import type { Customer, PaginatedResponse, Sale } from "@/lib/types";
-import { Alert, Btn, Field, Input, Modal, PageHeader, Pagination, Select, TableWrap, Td, Th } from "@/components/ui";
+import {
+  Alert,
+  Btn,
+  Field,
+  Input,
+  Modal,
+  PageHeader,
+  Pagination,
+  RowBtn,
+  RowDeleteBtn,
+  RowLink,
+  Select,
+  TableRowActions,
+  TableWrap,
+  Td,
+  TdActions,
+  Th,
+  ThActions,
+} from "@/components/ui";
 import { formatBDT } from "@/lib/format";
 
 type AgingRow = {
@@ -180,11 +198,11 @@ export default function CustomersPage() {
 
   return (
     <div>
-      <PageHeader title="Customers">
+      <PageHeader title="Customers & Dues">
         <Btn variant="secondary" onClick={() => setShowAging((v) => !v)}>
-          {showAging ? "Hide aging" : "Due aging"}
+          {showAging ? "Hide Aging" : "Due Aging"}
         </Btn>
-        <Btn onClick={openCreate}>Add customer</Btn>
+        <Btn onClick={openCreate}>New Customer</Btn>
       </PageHeader>
       {error && !collect && !open && !deleteTarget ? <Alert tone="error">{error}</Alert> : null}
       {msg ? <Alert tone="success">{msg}</Alert> : null}
@@ -231,7 +249,7 @@ export default function CustomersPage() {
             <Th className="hidden sm:table-cell">Phone</Th>
             <Th className="hidden md:table-cell">Credit limit</Th>
             <Th>Due balance</Th>
-            <Th />
+            <ThActions />
           </tr>
         </thead>
         <tbody>
@@ -246,36 +264,24 @@ export default function CustomersPage() {
               <Td className="hidden font-mono sm:table-cell">{c.phone}</Td>
               <Td className="hidden font-mono md:table-cell">{formatBDT(c.credit_limit)}</Td>
               <Td className="font-mono">{formatBDT(c.due_balance)}</Td>
-              <Td>
-                <div className="flex flex-wrap justify-end gap-1">
-                  <Link href={`/customers/${c.id}`}>
-                    <Btn variant="ghost" className="text-xs">
-                      Open
-                    </Btn>
-                  </Link>
-                  <Btn variant="ghost" className="text-xs" onClick={() => openEdit(c)}>
-                    Edit
-                  </Btn>
-                  <Btn
-                    variant="ghost"
-                    className="text-xs"
+              <TdActions>
+                <TableRowActions>
+                  <RowLink href={`/customers/${c.id}`}>View</RowLink>
+                  <RowBtn onClick={() => openEdit(c)}>Edit</RowBtn>
+                  <RowBtn
                     disabled={!(c.due_balance && Number(c.due_balance) > 0)}
                     onClick={() => void openCollect(c)}
                   >
-                    Collect
-                  </Btn>
-                  <Btn
-                    variant="ghost"
-                    className="text-xs text-red-600 hover:text-red-700"
+                    Collect Due
+                  </RowBtn>
+                  <RowDeleteBtn
                     onClick={() => {
                       setError("");
                       setDeleteTarget(c);
                     }}
-                  >
-                    Delete
-                  </Btn>
-                </div>
-              </Td>
+                  />
+                </TableRowActions>
+              </TdActions>
             </tr>
           ))}
         </tbody>

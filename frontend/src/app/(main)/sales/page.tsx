@@ -4,7 +4,19 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import type { PaginatedResponse, Sale } from "@/lib/types";
-import { Field, Input, PageHeader, Pagination, TableWrap, Td, Th } from "@/components/ui";
+import {
+  Field,
+  Input,
+  PageHeader,
+  Pagination,
+  RowLink,
+  TableRowActions,
+  TableWrap,
+  Td,
+  TdActions,
+  Th,
+  ThActions,
+} from "@/components/ui";
 import { formatBDT, formatDate } from "@/lib/format";
 import { useTodayState } from "@/lib/use-client-date";
 
@@ -37,7 +49,7 @@ export default function SalesPage() {
 
   return (
     <div>
-      <PageHeader title="Sales" />
+      <PageHeader title="Sales Invoices" />
       <div className="mb-4 grid gap-3 md:grid-cols-3">
         <Field label="From">
           <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
@@ -57,7 +69,7 @@ export default function SalesPage() {
             <Th className="hidden md:table-cell">Customer</Th>
             <Th>Total</Th>
             <Th>Status</Th>
-            <Th />
+            <ThActions />
           </tr>
         </thead>
         <tbody>
@@ -73,11 +85,11 @@ export default function SalesPage() {
               <Td className="hidden md:table-cell">{s.customer_name || "—"}</Td>
               <Td className="font-mono">{formatBDT(s.total)}</Td>
               <Td>{s.status}</Td>
-              <Td>
-                <Link href={`/sales/${s.id}`} className="text-teal-700 underline">
-                  Open
-                </Link>
-              </Td>
+              <TdActions>
+                <TableRowActions>
+                  <RowLink href={`/sales/${s.id}`}>View</RowLink>
+                </TableRowActions>
+              </TdActions>
             </tr>
           ))}
         </tbody>

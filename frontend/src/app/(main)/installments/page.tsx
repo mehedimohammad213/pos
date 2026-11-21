@@ -2,7 +2,22 @@
 
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import { Alert, Btn, Field, Input, Modal, PageHeader, TableWrap, Td, Th, Pagination } from "@/components/ui";
+import {
+  Alert,
+  Btn,
+  Field,
+  Input,
+  Modal,
+  PageHeader,
+  Pagination,
+  RowBtn,
+  TableRowActions,
+  TableWrap,
+  Td,
+  TdActions,
+  Th,
+  ThActions,
+} from "@/components/ui";
 import type { PaginatedResponse } from "@/lib/types";
 import { formatBDT, formatDate } from "@/lib/format";
 
@@ -91,11 +106,11 @@ export default function InstallmentsPage() {
 
   return (
     <div>
-      <PageHeader title="Installments" />
+      <PageHeader title="EMI / Installments" />
       {msg ? <Alert tone="success">{msg}</Alert> : null}
       {error ? <Alert tone="error">{error}</Alert> : null}
 
-      <h2 className="mb-2 font-medium text-slate-700">Overdue</h2>
+      <h2 className="mb-2 font-medium text-slate-700">Overdue EMI</h2>
       <div className="mb-8">
       <TableWrap>
         <thead>
@@ -105,7 +120,7 @@ export default function InstallmentsPage() {
             <Th>Amount</Th>
             <Th className="hidden md:table-cell">Paid</Th>
             <Th className="hidden sm:table-cell">Status</Th>
-            <Th />
+            <ThActions />
           </tr>
         </thead>
         <tbody>
@@ -119,11 +134,11 @@ export default function InstallmentsPage() {
               <Td className="font-mono">{formatBDT(d.amount)}</Td>
               <Td className="hidden font-mono md:table-cell">{formatBDT(d.paid_amount)}</Td>
               <Td className="hidden sm:table-cell">{d.status}</Td>
-              <Td>
-                <Btn variant="ghost" className="text-xs" onClick={() => setPayTarget(d)}>
-                  Pay
-                </Btn>
-              </Td>
+              <TdActions>
+                <TableRowActions>
+                  <RowBtn onClick={() => setPayTarget(d)}>Pay EMI</RowBtn>
+                </TableRowActions>
+              </TdActions>
             </tr>
           ))}
         </tbody>

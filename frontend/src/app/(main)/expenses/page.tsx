@@ -2,7 +2,24 @@
 
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import { Alert, Btn, Field, Input, Modal, PageHeader, Select, TableWrap, Td, Th, Pagination } from "@/components/ui";
+import {
+  Alert,
+  Btn,
+  Field,
+  Input,
+  Modal,
+  PageHeader,
+  Pagination,
+  RowBtn,
+  RowDeleteBtn,
+  Select,
+  TableRowActions,
+  TableWrap,
+  Td,
+  TdActions,
+  Th,
+  ThActions,
+} from "@/components/ui";
 import type { PaginatedResponse } from "@/lib/types";
 import { formatBDT, formatDate, todayISO } from "@/lib/format";
 import { useMonthStartState, useTodayState } from "@/lib/use-client-date";
@@ -122,8 +139,8 @@ export default function ExpensesPage() {
 
   return (
     <div>
-      <PageHeader title="Expenses">
-        <Btn onClick={openCreate}>Add expense</Btn>
+      <PageHeader title="Shop Expenses">
+        <Btn onClick={openCreate}>New Expense</Btn>
       </PageHeader>
       {error && !open && !deleteTarget ? <Alert tone="error">{error}</Alert> : null}
       {msg ? <Alert tone="success">{msg}</Alert> : null}
@@ -142,7 +159,7 @@ export default function ExpensesPage() {
             <Th>Category</Th>
             <Th>Amount</Th>
             <Th className="hidden sm:table-cell">Note</Th>
-            <Th />
+            <ThActions />
           </tr>
         </thead>
         <tbody>
@@ -152,23 +169,17 @@ export default function ExpensesPage() {
               <Td>{e.category_name || "—"}</Td>
               <Td className="font-mono">{formatBDT(e.amount)}</Td>
               <Td className="hidden max-w-[12rem] truncate sm:table-cell">{e.note}</Td>
-              <Td>
-                <div className="flex flex-wrap justify-end gap-1">
-                  <Btn variant="ghost" className="min-h-9 px-2 py-1 text-xs" onClick={() => openEdit(e)}>
-                    Edit
-                  </Btn>
-                  <Btn
-                    variant="ghost"
-                    className="min-h-9 px-2 py-1 text-xs text-red-600 hover:text-red-700"
+              <TdActions>
+                <TableRowActions>
+                  <RowBtn onClick={() => openEdit(e)}>Edit</RowBtn>
+                  <RowDeleteBtn
                     onClick={() => {
                       setError("");
                       setDeleteTarget(e);
                     }}
-                  >
-                    Delete
-                  </Btn>
-                </div>
-              </Td>
+                  />
+                </TableRowActions>
+              </TdActions>
             </tr>
           ))}
         </tbody>

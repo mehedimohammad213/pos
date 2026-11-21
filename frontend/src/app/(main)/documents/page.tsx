@@ -4,7 +4,20 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import type { InvoiceTemplate } from "@/lib/types";
-import { Alert, Btn, PageHeader, TableWrap, Td, Th } from "@/components/ui";
+import {
+  Alert,
+  Btn,
+  PageHeader,
+  RowBtn,
+  RowDeleteBtn,
+  RowLink,
+  TableRowActions,
+  TableWrap,
+  Td,
+  TdActions,
+  Th,
+  ThActions,
+} from "@/components/ui";
 import { formatDateTime } from "@/lib/format";
 import { DEFAULT_A4_HTML, DEFAULT_POS_HTML } from "@/lib/invoiceMerge";
 
@@ -70,12 +83,12 @@ export default function DocumentsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Invoice documents">
+      <PageHeader title="Invoice Templates">
         <Btn disabled={busy} onClick={() => void createTemplate("a4")}>
-          New A4 design
+          New A4 Design
         </Btn>
         <Btn variant="secondary" disabled={busy} onClick={() => void createTemplate("pos80")}>
-          New POS design
+          New POS Design
         </Btn>
       </PageHeader>
 
@@ -94,7 +107,7 @@ export default function DocumentsPage() {
             <Th>Paper</Th>
             <Th className="hidden sm:table-cell">Default</Th>
             <Th className="hidden md:table-cell">Updated</Th>
-            <Th>Actions</Th>
+            <ThActions />
           </tr>
         </thead>
         <tbody>
@@ -119,25 +132,15 @@ export default function DocumentsPage() {
                 )}
               </Td>
               <Td className="hidden md:table-cell">{formatDateTime(t.updated_at)}</Td>
-              <Td>
-                <div className="flex flex-wrap gap-2">
-                  <Link href={`/documents/${t.id}`}>
-                    <Btn variant="secondary" className="!px-2.5 !py-1 text-xs">
-                      Edit
-                    </Btn>
-                  </Link>
+              <TdActions>
+                <TableRowActions>
+                  <RowLink href={`/documents/${t.id}`}>Edit</RowLink>
                   {!t.is_default ? (
-                    <Btn variant="ghost" className="!px-2.5 !py-1 text-xs" onClick={() => void setDefault(t.id)}>
-                      Set for print
-                    </Btn>
+                    <RowBtn onClick={() => void setDefault(t.id)}>Set Default</RowBtn>
                   ) : null}
-                  {!t.is_default ? (
-                    <Btn variant="danger" className="!px-2.5 !py-1 text-xs" onClick={() => void remove(t.id)}>
-                      Delete
-                    </Btn>
-                  ) : null}
-                </div>
-              </Td>
+                  {!t.is_default ? <RowDeleteBtn onClick={() => void remove(t.id)} /> : null}
+                </TableRowActions>
+              </TdActions>
             </tr>
           ))}
           {!templates.length ? (

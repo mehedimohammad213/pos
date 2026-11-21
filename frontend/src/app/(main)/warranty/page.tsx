@@ -2,7 +2,23 @@
 
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import { Alert, Btn, Field, Input, Modal, PageHeader, Select, TableWrap, Td, Th, Pagination } from "@/components/ui";
+import {
+  Alert,
+  Btn,
+  Field,
+  Input,
+  Modal,
+  PageHeader,
+  Pagination,
+  RowBtn,
+  Select,
+  TableRowActions,
+  TableWrap,
+  Td,
+  TdActions,
+  Th,
+  ThActions,
+} from "@/components/ui";
 import type { PaginatedResponse } from "@/lib/types";
 import { formatDate } from "@/lib/format";
 
@@ -80,8 +96,8 @@ export default function WarrantyPage() {
 
   return (
     <div>
-      <PageHeader title="Warranty claims">
-        <Btn onClick={() => setOpen(true)}>New claim</Btn>
+      <PageHeader title="Warranty Claims">
+        <Btn onClick={() => setOpen(true)}>New Claim</Btn>
       </PageHeader>
       {error ? <Alert tone="error">{error}</Alert> : null}
       <TableWrap>
@@ -92,7 +108,7 @@ export default function WarrantyPage() {
             <Th className="hidden md:table-cell">Serial</Th>
             <Th className="hidden lg:table-cell">Customer</Th>
             <Th>Status</Th>
-            <Th />
+            <ThActions />
           </tr>
         </thead>
         <tbody>
@@ -106,13 +122,13 @@ export default function WarrantyPage() {
               <Td className="hidden font-mono text-xs md:table-cell">{w.serial_number}</Td>
               <Td className="hidden lg:table-cell">{w.customer_name}</Td>
               <Td>{w.status}</Td>
-              <Td>
+              <TdActions>
                 {w.status !== "resolved" ? (
-                  <Btn variant="ghost" className="text-xs" onClick={() => setResolve(w)}>
-                    Resolve
-                  </Btn>
+                  <TableRowActions>
+                    <RowBtn onClick={() => setResolve(w)}>Resolve Claim</RowBtn>
+                  </TableRowActions>
                 ) : null}
-              </Td>
+              </TdActions>
             </tr>
           ))}
         </tbody>

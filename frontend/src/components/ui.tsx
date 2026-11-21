@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { forwardRef, type ReactNode } from "react";
 
 export function PageHeader({ title, children }: { title: string; children?: ReactNode }) {
@@ -17,23 +18,117 @@ export function Card({ children, className = "" }: { children: ReactNode; classN
   );
 }
 
+type BtnVariant = "primary" | "secondary" | "danger" | "ghost";
+type BtnSize = "md" | "sm";
+
+const BTN_VARIANTS: Record<BtnVariant, string> = {
+  primary: "bg-teal-600 text-white hover:bg-teal-700",
+  secondary: "border border-slate-300 bg-white text-slate-800 hover:bg-slate-50",
+  danger: "bg-red-600 text-white hover:bg-red-700",
+  ghost: "text-teal-700 hover:bg-teal-50",
+};
+
+const BTN_SIZES: Record<BtnSize, string> = {
+  md: "min-h-10 px-3 py-2 text-sm sm:px-4",
+  sm: "min-h-9 px-2.5 py-1 text-xs",
+};
+
 export function Btn({
   children,
   variant = "primary",
+  size = "md",
   className = "",
   ...props
-}: React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: "primary" | "secondary" | "danger" | "ghost" }) {
-  const styles = {
-    primary: "bg-teal-600 text-white hover:bg-teal-700",
-    secondary: "border border-slate-300 bg-white text-slate-800 hover:bg-slate-50",
-    danger: "bg-red-600 text-white hover:bg-red-700",
-    ghost: "text-teal-700 hover:bg-teal-50",
-  };
+}: React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: BtnVariant; size?: BtnSize }) {
   return (
     <button
       type="button"
-      className={`inline-flex min-h-10 items-center justify-center whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium sm:px-4 disabled:opacity-50 ${styles[variant]} ${className}`}
+      className={`inline-flex items-center justify-center whitespace-nowrap rounded-lg font-medium disabled:opacity-50 ${BTN_VARIANTS[variant]} ${BTN_SIZES[size]} ${className}`}
       {...props}
+    >
+      {children}
+    </button>
+  );
+}
+
+/** Compact action button for table rows (Edit, Collect Due, Pay EMI, …). */
+export function RowBtn({
+  children,
+  className = "",
+  ...props
+}: React.ButtonHTMLAttributes<HTMLButtonElement>) {
+  return (
+    <Btn variant="ghost" size="sm" className={className} {...props}>
+      {children}
+    </Btn>
+  );
+}
+
+/** Destructive table-row action (always ghost + red text for dense tables). */
+export function RowDeleteBtn({
+  children = "Delete",
+  className = "",
+  ...props
+}: React.ButtonHTMLAttributes<HTMLButtonElement>) {
+  return (
+    <Btn
+      variant="ghost"
+      size="sm"
+      className={`text-red-600 hover:bg-red-50 hover:text-red-700 ${className}`}
+      {...props}
+    >
+      {children}
+    </Btn>
+  );
+}
+
+/** Link styled like a row action button (View invoice, Open customer, …). */
+export function RowLink({
+  href,
+  children,
+  className = "",
+  onClick,
+}: {
+  href: string;
+  children: ReactNode;
+  className?: string;
+  onClick?: () => void;
+}) {
+  return (
+    <Link
+      href={href}
+      onClick={onClick}
+      className={`inline-flex min-h-9 items-center justify-center whitespace-nowrap rounded-lg px-2.5 py-1 text-xs font-medium text-teal-700 hover:bg-teal-50 ${className}`}
+    >
+      {children}
+    </Link>
+  );
+}
+
+/** Right-aligned cluster of row action buttons. */
+export function TableRowActions({ children }: { children: ReactNode }) {
+  return <div className="flex flex-wrap items-center justify-end gap-1">{children}</div>;
+}
+
+/** Segmented tab control for list pages (Purchases / Suppliers, …). */
+export function TabBtn({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+        active
+          ? "bg-teal-600 text-white"
+          : "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+      }`}
     >
       {children}
     </button>
@@ -107,6 +202,16 @@ export function Td({
       {children}
     </td>
   );
+}
+
+/** Standard Actions column header. */
+export function ThActions({ className = "" }: { className?: string }) {
+  return <Th className={`text-right ${className}`}>Actions</Th>;
+}
+
+/** Actions cell that right-aligns TableRowActions. */
+export function TdActions({ children, className = "" }: { children: ReactNode; className?: string }) {
+  return <Td className={`text-right ${className}`}>{children}</Td>;
 }
 
 export function Alert({ children, tone = "error" }: { children: ReactNode; tone?: "error" | "success" | "info" }) {

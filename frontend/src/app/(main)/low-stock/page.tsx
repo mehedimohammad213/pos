@@ -83,7 +83,7 @@ export default function LowStockPage() {
 
   return (
     <div>
-      <PageHeader title="Low stock">
+      <PageHeader title="Low Stock Alert">
         <Btn onClick={() => void createDemand()} disabled={!selected.size || saving}>
           {saving
             ? "Creating…"
@@ -91,13 +91,13 @@ export default function LowStockPage() {
               ? (
                 <>
                   <span className="sm:hidden">Demand ({selected.size})</span>
-                  <span className="hidden sm:inline">Create purchase demand ({selected.size})</span>
+                  <span className="hidden sm:inline">Create Purchase Demand ({selected.size})</span>
                 </>
               )
               : (
                 <>
-                  <span className="sm:hidden">Create demand</span>
-                  <span className="hidden sm:inline">Create purchase demand</span>
+                  <span className="sm:hidden">Create Demand</span>
+                  <span className="hidden sm:inline">Create Purchase Demand</span>
                 </>
               )}
         </Btn>
