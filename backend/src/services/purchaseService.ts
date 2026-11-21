@@ -1,10 +1,12 @@
-import { PoolClient } from 'pg';
+import { PoolClient, QueryResultRow } from 'pg';
 import { query, withTransaction } from '../db/pool';
 import { nextDocumentNo } from '../utils/documents';
 import { AppError, assertFound } from '../utils/errors';
 import { writeAudit } from './auditService';
 import { addSerials } from './catalogService';
 import { formatPaginatedResponse } from '../utils/pagination';
+
+type RowWithItems = QueryResultRow & { items: QueryResultRow[] };
 
 export async function listSuppliers(params?: { page?: number; limit?: number; q?: string }) {
   const where: string[] = ['deleted_at IS NULL'];
@@ -155,7 +157,7 @@ export async function listDemands(
   return r.rows;
 }
 
-export async function getDemand(id: string, client?: PoolClient) {
+export async function getDemand(id: string, client?: PoolClient): Promise<RowWithItems> {
   const q = client ? client.query.bind(client) : query;
   const d = await q(
     `SELECT d.*, s.name AS supplier_name FROM purchase_demands d
@@ -437,7 +439,7 @@ export async function listPurchases(params?: {
   return r.rows;
 }
 
-export async function getPurchase(id: string, client?: PoolClient) {
+export async function getPurchase(id: string, client?: PoolClient): Promise<RowWithItems> {
   const q = client ? client.query.bind(client) : query;
   const p = await q(
     `SELECT p.*, s.name AS supplier_name FROM purchases p
