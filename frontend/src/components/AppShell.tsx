@@ -103,21 +103,24 @@ export function AppShell({ children }: { children: ReactNode }) {
     <div className="flex min-h-screen min-w-0 overflow-x-clip bg-slate-100 text-slate-900">
       <aside
         id="app-sidebar"
-        className={`fixed inset-y-0 left-0 z-40 flex w-[min(16rem,85vw)] max-w-full flex-col border-r border-slate-200 bg-slate-900 text-slate-100 transition-transform lg:static lg:w-64 lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-40 flex h-dvh max-h-dvh w-[min(16rem,85vw)] max-w-full flex-col overflow-hidden border-r border-slate-200 bg-slate-900 text-slate-100 transition-transform lg:sticky lg:top-0 lg:w-64 lg:translate-x-0 ${
           open ? "translate-x-0" : "-translate-x-full"
         }`}
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       >
-        <div className="border-b border-slate-700 px-4 py-5" style={{ paddingTop: "max(1.25rem, env(safe-area-inset-top))" }}>
+        <div
+          className="shrink-0 border-b border-slate-700 px-4 py-5"
+          style={{ paddingTop: "max(1.25rem, env(safe-area-inset-top))" }}
+        >
           <p className="text-lg font-semibold tracking-tight text-teal-400">Hardware POS</p>
           <p className="mt-1 truncate text-xs text-slate-400">{user?.name}</p>
         </div>
-        <nav className="flex-1 space-y-0.5 overflow-y-auto overscroll-contain p-2">
+        <nav className="min-h-0 flex-1 space-y-0.5 overflow-y-auto overscroll-contain p-2 [-webkit-overflow-scrolling:touch]">
           <Suspense fallback={<NavFallback items={visibleNav} />}>
             <SidebarNav items={visibleNav} onClose={() => setOpen(false)} />
           </Suspense>
         </nav>
-        <div className="border-t border-slate-700 p-3">
+        <div className="shrink-0 border-t border-slate-700 p-3">
           <button
             type="button"
             onClick={() => void logout()}
