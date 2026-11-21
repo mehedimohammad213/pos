@@ -991,7 +991,7 @@ function PosCartPanel(props: {
       <Field label="Notes">
         <Input value={props.notes} onChange={(e) => props.setNotes(e.target.value)} />
       </Field>
-      <CartActions completeSale={props.completeSale} />
+      <CartActions completeSale={props.completeSale} canHold={props.cart.length > 0} />
       {props.held.length ? (
         <PurHolds held={props.held} recall={props.recall} onCancelHold={props.onCancelHold} />
       ) : null}
@@ -1090,13 +1090,28 @@ function PaymentFields({
   );
 }
 
-function CartActions({ completeSale }: { completeSale: (hold?: boolean) => void }) {
+function CartActions({
+  completeSale,
+  canHold,
+}: {
+  completeSale: (hold?: boolean) => void;
+  canHold: boolean;
+}) {
   return (
     <div className="grid grid-cols-1 gap-3 pt-2 sm:grid-cols-2">
       <Btn className="min-h-12 py-3 text-base sm:py-4 sm:text-lg" onClick={() => void completeSale(false)}>
         Pay & complete
       </Btn>
-      <Btn variant="secondary" className="min-h-12 py-3 text-base sm:py-4 sm:text-lg" onClick={() => void completeSale(true)}>
+      <Btn
+        variant="secondary"
+        className="min-h-12 py-3 text-base disabled:cursor-not-allowed sm:py-4 sm:text-lg"
+        disabled={!canHold}
+        title={canHold ? "Hold this sale" : "Add a product to the cart to hold the sale"}
+        onClick={() => {
+          if (!canHold) return;
+          void completeSale(true);
+        }}
+      >
         Hold sale
       </Btn>
     </div>
