@@ -93,6 +93,14 @@ router.patch('/products/:id', authRequired, requireRoles('admin', 'manager', 'st
   }
 });
 
+router.delete('/products/:id', authRequired, requireRoles('admin', 'manager', 'stock'), async (req, res, next) => {
+  try {
+    res.json(await catalog.deleteProduct(param(req.params.id), req.user!.id));
+  } catch (e) {
+    next(e);
+  }
+});
+
 router.post('/products/import', authRequired, requireRoles('admin', 'manager', 'stock'), async (req, res, next) => {
   try {
     const body = z

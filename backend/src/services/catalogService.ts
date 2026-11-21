@@ -191,6 +191,30 @@ export async function updateProduct(id: string, input: Record<string, unknown>, 
   return product;
 }
 
+export async function deleteProduct(id: string, userId?: string) {
+  const existing = await getProduct(id);
+  // Free unique sku/barcode so the same codes can be reused on a new product.
+  const suffix = `-DEL-${String(existing.id).slice(0, 8)}`;
+  const r = await query(
+    `UPDATE products SET
+       deleted_at = NOW(),
+       is_active = FALSE,
+       sku = sku || $2,
+       barcode = barcode || $2,
+       updated_at = NOW()
+     WHERE id = $1 AND deleted_at IS NULL
+     RETURNING *`,
+    [id, suffix]
+  );
+  const product = assertFound(r.rows[0], 'Product not found');
+  await writeAudit(userId, 'product.delete', 'product', id, {
+    sku: existing.sku,
+    barcode: existing.barcode,
+    name: existing.name,
+  });
+  return product;
+}
+
 export interface ImportBulkOptions {
   updateExisting?: boolean;
   autoCreateCategories?: boolean;

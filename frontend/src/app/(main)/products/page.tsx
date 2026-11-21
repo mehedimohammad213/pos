@@ -28,7 +28,8 @@ const emptyForm = {
 const PAGE_SIZE = 10;
 
 export default function ProductsPage() {
-  const { canSeeCost } = useAuth();
+  const { canSeeCost, user } = useAuth();
+  const canManageProducts = !!user && ["admin", "manager", "stock"].includes(user.role);
   const [rows, setRows] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [brands, setBrands] = useState<Brand[]>([]);
@@ -40,6 +41,8 @@ export default function ProductsPage() {
   const [editId, setEditId] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [adjust, setAdjust] = useState<{ id: string; qty: string; note: string } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Product | null>(null);
+  const [deleteBusy, setDeleteBusy] = useState(false);
   const [label, setLabel] = useState<Product | null>(null);
   const [printLabels, setPrintLabels] = useState<Product[] | null>(null);
   const [autoPrint, setAutoPrint] = useState(false);
@@ -48,7 +51,7 @@ export default function ProductsPage() {
   const [msg, setMsg] = useState("");
   const [scanOpen, setScanOpen] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
-  const modalOpen = scanOpen || open || !!adjust;
+  const modalOpen = scanOpen || open || !!adjust || !!deleteTarget;
 
   const focusSearch = useCallback(
     (force = false) => {
@@ -207,6 +210,31 @@ export default function ProductsPage() {
     });
     setAdjust(null);
     await load(page, q);
+  }
+
+  async function confirmDeleteProduct() {
+    if (!deleteTarget) return;
+    setError("");
+    setMsg("");
+    setDeleteBusy(true);
+    try {
+      await api(`/catalog/products/${deleteTarget.id}`, { method: "DELETE" });
+      setSelected((prev) => {
+        const next = new Set(prev);
+        next.delete(deleteTarget.id);
+        return next;
+      });
+      setDeleteTarget(null);
+      setMsg(`Deleted "${deleteTarget.name}"`);
+      const nextTotal = Math.max(0, total - 1);
+      const nextTotalPages = Math.max(1, Math.ceil(nextTotal / PAGE_SIZE));
+      const nextPage = Math.min(page, nextTotalPages);
+      await load(nextPage, q);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Delete failed");
+    } finally {
+      setDeleteBusy(false);
+    }
   }
 
   function startEdit(p: Product) {
@@ -382,6 +410,18 @@ export default function ProductsPage() {
                   >
                     Label
                   </Btn>
+                  {canManageProducts ? (
+                    <Btn
+                      variant="ghost"
+                      className="min-h-9 px-2 py-1 text-xs text-red-600 hover:text-red-700"
+                      onClick={() => {
+                        setError("");
+                        setDeleteTarget(p);
+                      }}
+                    >
+                      Delete
+                    </Btn>
+                  ) : null}
                 </div>
               </Td>
             </tr>
@@ -482,6 +522,36 @@ export default function ProductsPage() {
             </Btn>
           </>
         ) : null}
+      </Modal>
+
+      <Modal
+        open={!!deleteTarget}
+        onClose={() => {
+          if (!deleteBusy) setDeleteTarget(null);
+        }}
+        title="Delete product"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-slate-600">
+            Remove{" "}
+            <span className="font-medium text-slate-900">{deleteTarget?.name}</span>
+            {deleteTarget?.sku ? (
+              <>
+                {" "}
+                (<span className="font-mono text-xs">{deleteTarget.sku}</span>)
+              </>
+            ) : null}{" "}
+            from the catalog? Past sales stay unchanged. You can add the same SKU/barcode again later.
+          </p>
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <Btn variant="secondary" disabled={deleteBusy} onClick={() => setDeleteTarget(null)}>
+              Keep product
+            </Btn>
+            <Btn variant="danger" disabled={deleteBusy} onClick={() => void confirmDeleteProduct()}>
+              {deleteBusy ? "Deleting…" : "Yes, delete"}
+            </Btn>
+          </div>
+        </div>
       </Modal>
 
       <Modal open={scanOpen} onClose={() => setScanOpen(false)} title="Camera barcode scan" wide>
